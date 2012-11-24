@@ -29,7 +29,7 @@ def main(arglist):
     fix = visual.PatchStim(win, tex=None, mask="circle",
                            color=p.fix_color, size=p.fix_size)
     stims = dict(frame=Frame(win, p),
-                 grate=Grating(win, p),
+                 dots=Dots(win, p),
                  fix=fix)
     if mode == "train":
         stims["fb"] = Feedback(win, p)
@@ -118,7 +118,7 @@ class EventEngine(object):
         self.win = win
         self.stims = stims
         self.frame = stims["frame"]
-        self.grate = stims["grate"]
+        self.dots = stims["dots"]
         if "fb" in stims:
             self.fb = stims["fb"]
         self.stim_dur = stim_dur
@@ -135,17 +135,19 @@ class EventEngine(object):
             self.win.flip()
             wait_check_quit(cue_dur)
 
-        self.frame.draw()
-        self.grate.draw()
-        self.win.flip()
-        wait_check_quit(self.stim_dur)
+        for frame in xrange(120):
+            self.frame.draw()
+            self.dots.draw()
+            self.win.flip()
+        check_quit()
+        #wait_check_quit(self.stim_dur)
 
         if self.give_feedback:
             correct = tools.flip()
             self.fb.set_status(correct)
             self.frame.draw()
             self.fb.draw()
-            self.grate.draw()
+            self.dots.draw()
             self.win.flip()
             wait_check_quit(self.fb_dur)
 
@@ -208,6 +210,24 @@ class Grating(object):
         self.disk.draw()
         self.fix.draw()
 
+
+class Dots(object):
+
+    def __init__(self, win, p):
+
+        inner_size = p.frame_size - 2 * p.frame_width
+        ndots = int(p.dot_ndots / 2)
+        self.dots = [visual.DotStim(win, nDots=ndots,
+                                    fieldSize=inner_size,
+                                    dotSize=p.dot_size,
+                                    dir=p.dot_dirs[0],
+                                    coherence=p.dot_mot_coh,
+                                    speed=p.dot_speed,
+                                    color=color) for color in p.dot_cols]
+
+    def draw(self):
+
+        [d.draw() for d in self.dots]
 
 class Feedback(object):
 
