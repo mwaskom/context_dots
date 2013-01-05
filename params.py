@@ -7,35 +7,31 @@ punch_base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
+    window_color="black",
 
     # Fixation
     fix_size=.2,
     fix_color='#FFFFFF',
 
     # Frame
-    frame_size=10,
     frame_width=.5,
     frame_shape=None,
-    frame_opacity=.7,
-    frame_colors=["red", "blue", "green", "yellow", "magenta", "cyan"],
-
-    # Gratings
-    stim_size=7,
-    stim_mask="gauss",
-    stim_opacity=1,
-    stim_contrasts=[.8, .5, .2],
-    stim_sfs=[1.5, 2, 2.5],
-    stim_oris=[15, 50, 85],
-    stim_disk_ratio=8,
+    frame_opacity=1,
+    frame_colors=["gray", "white"],
 
     # Dots
-    dot_cols=["#FF0000", "#00FF00"],
-    dot_dirs=[0, 180],
-    dot_mot_coh=.2,
-    dot_col_coh=.2,
-    dot_ndots=100,
-    dot_speed=0.1,
-    dot_size=4,
+    dot_field_size=8,  # in degrees
+    dot_shape="circle",
+    dot_colors=[(1, -1, -1), (-1, 1, -1), (-1, -1, 1), (1, 1, -1)],
+    dot_color_names=["red", "green", "blue", "yellow"],
+    dot_dirs=[45, 135, 225, 315],
+    dot_life_mean=20,  # in frames
+    dot_life_std=5,  # in frames
+    dot_mot_coh=.45,  # pct dots moving coherently
+    dot_col_coh=.8,  # pct additional dots in target color
+    dot_number=100,
+    dot_speed=3,  # in degrees/sec
+    dot_size=.1,  # in degrees
 
     # Response settings
     resp_keys=["j", "k", "l"],
@@ -46,9 +42,10 @@ punch_behav = dict(
 
     # Experimental variables
     early_cue_prob=.5,
+    stim_dur=1,
 
     # Timing
-    stim_dur=1,
+    stim_flips=120,  # number of frames
     iti=(.5, 2.5),
     cue_dur=(.5, 2.5),
 

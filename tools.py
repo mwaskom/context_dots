@@ -234,6 +234,7 @@ class WindowInfo(object):
         info = dict(units=params.monitor_units,
                     fullscr=params.full_screen,
                     allowGUI=not params.full_screen,
+                    color=params.window_color,
                     size=size,
                     monitor=monitor)
 
