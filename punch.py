@@ -3,6 +3,7 @@ import sys
 import os.path as op
 from textwrap import dedent
 from string import letters
+import colorsys
 import pandas as pd
 import numpy as np
 from numpy.random import RandomState, randint, uniform, binomial
@@ -27,8 +28,8 @@ def main(arglist):
     win = visual.Window(**m.window_kwargs)
 
     # Set up the stimulus objects
-    fix = visual.PatchStim(win, tex=None, mask="circle",
-                           color=p.fix_color, size=p.fix_size)
+    fix = visual.GratingStim(win, tex=None, mask="circle",
+                             color=p.fix_color, size=p.fix_size)
     stims = dict(frame=Frame(win, p),
                  dots=Dots(win, p),
                  fix=fix)
@@ -44,9 +45,8 @@ def behav(p, win, stims):
     with tools.PresentationLoop(win):
         for i in xrange(12):
 
-            rel_dim = randint(2)
-            dim_color = p.frame_colors[rel_dim]
-            stims["frame"].set_color(dim_color)
+            context = randint(2)
+            stims["frame"].set_context(context)
 
             if binomial(1, p.early_cue_prob):
                 early = True
@@ -55,9 +55,10 @@ def behav(p, win, stims):
                 early = False
                 cue_dur = None
 
-            color = np.random.randint(len(p.dot_colors))
+            color = np.random.randint(len(p.dot_color_names))
             direction = np.random.randint(len(p.dot_dirs))
-            res = stim_event(color, direction, early, cue_dur)
+            target = [color, direction][context]
+            res = stim_event(color, direction, context, target, early, cue_dur)
 
             stims["fix"].draw()
             win.flip()
@@ -68,54 +69,111 @@ def train(p, win, stims):
 
     tools.WaitText(win, "hello world", height=.7)(check_keys=["space"])
 
-    stim_event = EventEngine(win, stims, p)
+    stim_event = EventEngine(win, stims, p, feedback=True)
+
+    trained = False
+    with tools.PresentationLoop(win):
+        while not trained:
+
+            context = randint(2)
+            stims["frame"].set_context(context)
+
+            for trial in xrange(p.n_per_block):
+
+                color = np.random.randint(len(p.dot_color_names))
+                direction = np.random.randint(len(p.dot_dirs))
+                target = color if context == "color" else direction
+                res = stim_event(color, direction, context, target)
+
+                stims["fix"].draw()
+                stims["frame"].draw()
+                win.flip()
+                wait_check_quit(uniform(*p.iti))
 
 
 class EventEngine(object):
 
-    def __init__(self, win, stims, p, debug=False):
+    def __init__(self, win, stims, p, feedback=False):
 
         self.win = win
         self.stims = stims
+        self.p = p
+        self.feedback = feedback
+        self.fix = stims["fix"]
         self.frame = stims["frame"]
         self.dots = stims["dots"]
-        if "fb" in stims:
-            self.fb = stims["fb"]
-        self.p = p
-        self.stim_dur = p.stim_dur
         self.resp_keys = p.resp_keys
         self.debug = p.debug
         if self.debug:
-            self.debug_text = visual.TextStim(win,
-                                              pos=(0.0, -5.0),
-                                              height=0.5)
+            self.debug_text = [visual.TextStim(win,
+                                               pos=(0.0, -5.0),
+                                               height=0.5),
+                               visual.TextStim(win,
+                                               pos=(0.0, 5.0),
+                                               height=0.5)]
 
-    def __call__(self, color, direction, early, cue_dur, target=None):
+    def __call__(self, color, direction, context, target,
+                 early=False, cue_dur=0):
 
         self.dots.new_positions()
 
-        color_name = self.p.dot_color_names[color]
-        direction_deg = self.p.dot_dirs[direction]
-
+        # Debugging information
         if self.debug:
-            msg = "Color: %s; Direction: %s" % (color_name, direction_deg)
-            self.debug_text.setText(msg)
+            color_name = self.p.dot_color_names[color]
+            direction_deg = self.p.dot_dirs[direction]
+            msg1 = "Color: %s   Direction: %s" % (color_name, direction_deg)
+            self.debug_text[0].setText(msg1)
+            msg2 = ["color", "motion"][context]
+            self.debug_text[1].setText(msg2)
 
         self.dots.new_colors(color)
         self.dots.new_directions(direction)
 
+        # Early Cue Presentation
         if early:
             self.frame.draw()
+            self.fix.draw()
             self.win.flip()
             wait_check_quit(cue_dur)
 
+        # Main Stimulus Presentation
+        resp_clock = core.Clock()
+        event.clearEvents()
         for frame in xrange(self.p.stim_flips):
-            self.frame.draw()
+            self.fix.draw()
             self.dots.draw()
+            self.frame.draw()
             if self.debug:
-                self.debug_text.draw()
+                for text in self.debug_text:
+                    text.draw()
             self.win.flip()
-        check_quit()
+
+        # Response Collection
+        correct = False
+        rt = np.nan
+        keys = event.getKeys(timeStamped=resp_clock)
+        for key, stamp in keys:
+            if key in ["q", "escape"]:
+                print "Subject quit execution"
+                core.quit()
+            elif key in self.resp_keys:
+                key_idx = self.resp_keys.index(key)
+                rt = stamp
+                if key_idx == target:
+                    correct = True
+
+        # Feedback
+        if self.feedback and not correct:
+            for frame in xrange(60):
+            #for frame in xrange(self.p.fb_frames):
+                if not frame % 10:
+                #if not frame % self.p.fb_freq:
+                    self.frame.flip_phase()
+                self.frame.draw()
+                self.fix.draw()
+                self.win.flip()
+
+            self.frame.reset_phase()
 
         return None
 
@@ -124,26 +182,51 @@ class Frame(object):
 
     def __init__(self, win, p):
 
-        self.fix = visual.PatchStim(win, tex=None, mask="circle",
-                                    color=p.fix_color, size=p.fix_size)
-        frame_size = p.dot_field_size + 2 * p.frame_width
-        self.frame = visual.PatchStim(win, tex=None, mask=p.frame_shape,
-                                      opacity=p.frame_opacity,
-                                      size=frame_size)
-        inner_size = p.dot_field_size + 2 * p.dot_size
-        self.inner = visual.PatchStim(win, tex=None, color=p.window_color,
-                                      mask=p.frame_shape,
-                                      size=inner_size)
+        self.lr = []
+        self.tb = []
+        self.field_size = p.field_size
+        self.frame_width = p.frame_width
+        self.sf_list = p.frame_sfs
 
-    def set_color(self, color):
+        for pos in [-.5, .5]:
+            self.lr.append(visual.GratingStim(win, tex=p.frame_tex,
+                                              contrast=p.frame_contrast,
+                                              pos=(0, pos * p.field_size)))
 
-        self.frame.setColor(color)
+            self.tb.append(visual.GratingStim(win, tex=p.frame_tex,
+                                              contrast=p.frame_contrast,
+                                              pos=(pos * p.field_size, 0)))
+
+    def set_context(self, context):
+
+        w = self.frame_width
+        sizes = [(self.field_size + w, w),
+                 (w, self.field_size + w)]
+        for i in range(2):
+            self.lr[i].setOri([0, 90][context])
+            self.tb[i].setOri([90, 0][context])
+            for sides in ["lr", "tb"]:
+                obj = getattr(self, sides)
+                obj[i].setSize(sizes[context])
+                obj[i].setSF(self.sf_list[context])
+
+    def flip_phase(self):
+
+        for stims in [self.tb, self.lr]:
+            for i in range(2):
+                stims[i].setPhase((stims[i].phase + .5) % 1)
+
+    def reset_phase(self):
+
+        for stims in [self.tb, self.lr]:
+            for i in range(2):
+                stims[i].setPhase(0)
 
     def draw(self):
 
-        self.frame.draw()
-        self.inner.draw()
-        self.fix.draw()
+        for stims in [self.tb, self.lr]:
+            for i in range(2):
+                stims[i].draw()
 
 
 class Dots(object):
@@ -151,19 +234,21 @@ class Dots(object):
     def __init__(self, win, p):
 
         self.speed = p.dot_speed / 60
-        self.colors = p.dot_colors
+        self.colors = p.dot_color_names
+        self.dot_sat = p.dot_sat
+        self.dot_val = p.dot_val
         self.dirs = p.dot_dirs
-        self.field_size = p.dot_field_size
+        self.field_size = p.field_size
         self.ndots = p.dot_number
         self.dot_life_mean = p.dot_life_mean
         self.dot_life_std = p.dot_life_std
-        self.dimension = len(p.dot_colors)
+        self.dimension = len(p.dot_color_names)
         assert self.dimension == len(p.dot_dirs)
 
         dot_shape = None if p.dot_shape == "square" else p.dot_shape
         self.dots = visual.ElementArrayStim(win, "deg",
                                             fieldShape="square",
-                                            fieldSize=p.dot_field_size,
+                                            fieldSize=p.field_size,
                                             nElements=p.dot_number,
                                             sizes=p.dot_size,
                                             elementMask=dot_shape,
@@ -171,50 +256,42 @@ class Dots(object):
                                             elementTex=None,
                                             )
 
-        # Build an index into the dot list for colors
-        n_colors = len(p.dot_colors)
-        per_cell = p.dot_number / n_colors
-        extra_targets = per_cell * p.dot_col_coh
-        n_target = per_cell + extra_targets
-        n_distract = per_cell - extra_targets / (n_colors - 1)
-        color_ids = [np.repeat(0, n_target)]
-        color_ids += [np.repeat(i, n_distract) for i in range(1, n_colors)]
-        color_ids = np.concatenate(color_ids)
-        #assert len(color_ids) == p.dot_number
-        self.color_ids = color_ids
-
-        # Now figure out which dots should move coherently
-        signal_dots = np.ones(color_ids.shape, bool)
-        for i in range(n_colors):
-            n_dots = np.sum(color_ids == i)
-            n_signal = n_dots * p.dot_mot_coh
-            n_noise = n_dots - n_signal
-            signal_dots[color_ids == i] = np.concatenate(
-                [np.repeat(True, n_signal), np.repeat(False, n_noise)])
-        #assert signal_dots.sum() / p.dot_number == p.dot_mot_coh
-        self.signal_dots = signal_dots
+        self.new_signals(p.dot_col_coh, p.dot_mot_coh)
 
         self.dot_life = np.round(np.random.normal(p.dot_life_mean,
                                                   p.dot_life_std,
                                                   size=p.dot_number))
 
+    def new_signals(self, col_coh, mot_coh):
+
+        col_signal = np.zeros(self.ndots, bool)
+        mot_signal = np.zeros(self.ndots, bool)
+
+        n_col_signal = col_coh * self.ndots
+        col_signal[:n_col_signal] = True
+
+        n_mot_signal_a = mot_coh * n_col_signal
+        n_mot_signal_b = mot_coh * (self.ndots - n_col_signal)
+        mot_signal[:n_mot_signal_a] = True
+        mot_signal[n_col_signal:(n_col_signal + n_mot_signal_b)] = True
+
+        self.col_signal = col_signal
+        self.mot_signal = mot_signal
+
     def new_colors(self, target_color):
 
-        colors = np.zeros((self.ndots, 3))
-        colors[self.color_ids == 0] = self.colors[target_color]
-        
-        j = 1  # We need two indices
-        for i, color in enumerate(self.colors):
-            if i != target_color:
-                colors[self.color_ids == j] = color
-                j += 1
-
+        hues = np.random.uniform(size=self.ndots)
+        hues[self.col_signal] = target_color / 3
+        s = self.dot_sat
+        v = self.dot_val
+        colors = np.array([colorsys.hsv_to_rgb(h, s, v) for h in hues])
+        colors = colors * 2 - 1
         self.dots.setColors(colors)
 
     def new_directions(self, target_dir):
 
-        dirs = np.random.rand(self.ndots) * 2 * np.pi
-        dirs[self.signal_dots] = np.deg2rad(self.dirs[target_dir])
+        dirs = np.random.uniform(size=self.ndots) * 2 * np.pi
+        dirs[self.mot_signal] = np.deg2rad(self.dirs[target_dir])
         self._dot_dirs = dirs
 
     def new_positions(self, mask=None):

@@ -61,7 +61,7 @@ class Params(object):
             self.full_screen = False
 
         if self.fmri:
-            self.monitor_name="cni_lcd2"
+            self.monitor_name = "cni_lcd2"
 
         if hasattr(self, "dummy_trs") and not self.fmri:
             self.dummy_trs = 1
@@ -248,9 +248,9 @@ class WaitText(object):
     def __init__(self, win, text='Press a key to continue', **kwargs):
         """Set the text stimulus information.
 
-        Will do the default thing(show 'text' in white on gray background),
+        Will do the default thing(show 'text' in white
         unless you pass in kwargs, which will just go through to
-        visual.TextStim (see docstring of that class for more details)
+        visual.TextStim.
 
         """
         self.win = win
@@ -275,7 +275,7 @@ class PresentationLoop(object):
     def __init__(self, win, fileobj=None):
         self.win = win
         if fileobj is not None:
-            self.fileobj = fileobj 
+            self.fileobj = fileobj
 
     def __enter__(self):
         pass
@@ -455,8 +455,6 @@ def max_four_in_a_row(seq):
         if check_str in seq_str:
             return False
     return True
-
-
 
 
 def cb1_ideal(ev_count):
