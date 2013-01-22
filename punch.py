@@ -43,22 +43,26 @@ def behav(p, win, stims):
     stim_event = EventEngine(win, stims, p)
 
     with tools.PresentationLoop(win):
-        for i in xrange(12):
 
-            context = randint(2)
+        d = pd.read_csv("design/behav_%02d.csv" % p.run)
+        n_trials = len(d)
+
+        for trial in xrange(n_trials):
+
+            context = d.context[trial]
             stims["frame"].set_context(context)
 
-            if binomial(1, p.early_cue_prob):
+            if d.early[trial]:
                 early = True
                 cue_dur = uniform(*p.cue_dur)
             else:
                 early = False
                 cue_dur = None
 
-            color = np.random.randint(len(p.dot_color_names))
-            direction = np.random.randint(len(p.dot_dirs))
-            target = [color, direction][context]
-            res = stim_event(color, direction, context, target, early, cue_dur)
+            motion = d.motion[trial]
+            color = d.color[trial]
+            target = [color, motion][context]
+            res = stim_event(context, motion, color, target, early, cue_dur)
 
             stims["fix"].draw()
             win.flip()
@@ -112,7 +116,7 @@ class EventEngine(object):
                                                pos=(0.0, 5.0),
                                                height=0.5)]
 
-    def __call__(self, color, direction, context, target,
+    def __call__(self, context, direction, color, target,
                  early=False, cue_dur=0):
 
         self.dots.new_positions()
@@ -121,9 +125,9 @@ class EventEngine(object):
         if self.debug:
             color_name = self.p.dot_color_names[color]
             direction_deg = self.p.dot_dirs[direction]
-            msg1 = "Color: %s   Direction: %s" % (color_name, direction_deg)
+            msg1 = "Orient: %s   Color: %s" % (color_name, direction_deg)
             self.debug_text[0].setText(msg1)
-            msg2 = ["color", "motion"][context]
+            msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
         self.dots.new_colors(color)
@@ -187,14 +191,17 @@ class Frame(object):
         self.field_size = p.field_size
         self.frame_width = p.frame_width
         self.sf_list = p.frame_sfs
+        self.base_phase = 0 if p.window_color in ["black", -1] else 0.5
 
         for pos in [-.5, .5]:
             self.lr.append(visual.GratingStim(win, tex=p.frame_tex,
                                               contrast=p.frame_contrast,
+                                              phase=self.base_phase,
                                               pos=(0, pos * p.field_size)))
 
             self.tb.append(visual.GratingStim(win, tex=p.frame_tex,
                                               contrast=p.frame_contrast,
+                                              phase=self.base_phase,
                                               pos=(pos * p.field_size, 0)))
 
     def set_context(self, context):
@@ -220,7 +227,7 @@ class Frame(object):
 
         for stims in [self.tb, self.lr]:
             for i in range(2):
-                stims[i].setPhase(0)
+                stims[i].setPhase(self.base_phase)
 
     def draw(self):
 
@@ -235,6 +242,7 @@ class Dots(object):
 
         self.speed = p.dot_speed / 60
         self.colors = p.dot_color_names
+        self.dot_base_hue = p.dot_base_hue
         self.dot_sat = p.dot_sat
         self.dot_val = p.dot_val
         self.dirs = p.dot_dirs
@@ -281,7 +289,10 @@ class Dots(object):
     def new_colors(self, target_color):
 
         hues = np.random.uniform(size=self.ndots)
-        hues[self.col_signal] = target_color / 3
+        t_hue = target_color / self.dimension
+        t_hue = t_hue + self.dot_base_hue
+        t_hue = t_hue - np.floor(t_hue)
+        hues[self.col_signal] = t_hue
         s = self.dot_sat
         v = self.dot_val
         colors = np.array([colorsys.hsv_to_rgb(h, s, v) for h in hues])

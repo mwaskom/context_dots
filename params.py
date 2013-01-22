@@ -7,7 +7,7 @@ punch_base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
-    window_color="black",
+    window_color=0,
 
     # Fixation
     fix_size=.2,
@@ -22,13 +22,14 @@ punch_base = dict(
 
     # Dots
     dot_shape="circle",
-    dot_color_names=["red", "green", "blue"],
-    dot_dirs=[30, 150, 270],
+    dot_color_names=["red", "cyan"],
+    dot_dirs=[90, 270],
     dot_life_mean=60,  # in frames
     dot_life_std=20,  # in frames
-    dot_mot_coh=.2,  # pct dots moving coherently
-    dot_col_coh=.2,  # pct  dots in target color
-    dot_sat=.75,
+    dot_mot_coh=.3,  # pct dots moving coherently
+    dot_col_coh=.3,  # pct  dots in target color
+    dot_base_hue=0,
+    dot_sat=1,
     dot_val=1,
     dot_number=100,
     dot_speed=3,  # in degrees/sec
@@ -45,9 +46,6 @@ punch_base = dict(
     )
 
 punch_behav = dict(
-
-    # Experimental variables
-    early_cue_prob=.5,
 
     # Timing
     cue_dur=(.5, 2.5),
@@ -68,8 +66,12 @@ punch_train = dict(
 )
 punch_train.update(punch_base)
 
+behav_design = dict(
 
-def add_cmdline_params(parser):
+    total_designs=10,
+    trials_per_run=100,
+    early_cue_prob=.5,
+    context_freqs=[[.5, .5], [.7, .3], [.9, .1]],
+    feature_freqs=[[.5, .5], [.7, .3], [.9, .1]],
 
-    parser.add_argument("-train", action="store_true")
-    return parser
+)
