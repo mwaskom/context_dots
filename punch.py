@@ -38,15 +38,18 @@ def main(arglist):
 
 def behav(p, win, stims):
 
+    state = RandomState(abs(hash(p.subject)))
+    choices = list(letters[:8])
+    p.sched_id = state.permutation(choices)[p.run - 1]
+    design_file = "design/behav_%s.csv" % p.sched_id
+    d = pd.read_csv(design_file)
+    n_trials = len(d)
+
     tools.WaitText(win, "hello world", height=.7)(check_keys=["space"])
 
     stim_event = EventEngine(win, stims, p)
 
     with tools.PresentationLoop(win):
-
-        d = pd.read_csv("design/behav_%02d.csv" % p.run)
-        n_trials = len(d)
-
         for trial in xrange(n_trials):
 
             context = d.context[trial]

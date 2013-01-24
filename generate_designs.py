@@ -1,11 +1,11 @@
 from __future__ import division
 import sys
-import os.path as op
 from string import letters
 import json
 import pandas as pd
 import numpy as np
-from numpy.random import randint, permutation
+from numpy.random import permutation
+from itertools import permutations, product
 import tools
 
 
@@ -19,22 +19,27 @@ def main(arglist):
 
 def behav(p):
 
-    for type in ["context", "feature"]:
-        assert len(np.unique(map(len, getattr(p, "%s_freqs" % type)))) == 1
+    freq_dist = [.2, .4, .6, .8]
+    bal_feature = lambda x: sum(x) == 1
+    feat = filter(bal_feature, permutations(freq_dist, 2))
+    bal_context = lambda x: sum([i[0] for i in x]) == 1
+    full = filter(bal_context, permutations(product(freq_dist, feat), 2))
+    idx = np.arange(0, 64, 8) + np.arange(8)
+    sched = [full[i] for i in idx]
 
-    n_c_freqs = len(p.context_freqs)
-    n_f_freqs = len(p.feature_freqs)
+    for d_i, run in enumerate(sched):
 
-    for d_i in xrange(p.total_designs):
+        m_freq, dir_freqs = run[0]
+        c_freq, hue_freqs = run[1]
 
         context = []
         motion = []
         color = []
         early = []
 
-        context_freq = permutation(p.context_freqs[randint(n_c_freqs)])
-        motion_freq = permutation(p.feature_freqs[randint(n_f_freqs)])
-        color_freq = permutation(p.feature_freqs[randint(n_f_freqs)])
+        context_freq = np.array([m_freq, c_freq])
+        motion_freq = np.array(dir_freqs)
+        color_freq = np.array(hue_freqs)
 
         for c_i, c_f in enumerate(context_freq):
             context += [c_i] * (c_f * p.trials_per_run)
@@ -77,14 +82,15 @@ def behav(p):
         run_design["target_freq"] = (run_design["context_freq"] *
                                      run_design["target_freq_g_cue"])
 
-        run_design.to_csv("design/behav_%02d.csv" % d_i,
+        fname_stem = "design/behav_%s" % letters[d_i]
+        run_design.to_csv(fname_stem + ".csv",
                           index_label="trial")
 
         run_data = dict(context_freq=context_freq,
                         motion_freq=motion_freq,
                         color_freq=color_freq)
         run_data = {k: v.tolist() for k, v in run_data.items()}
-        with open("design/behav_%02d.json" % d_i, "w") as fobj:
+        with open(fname_stem + ".json", "w") as fobj:
             json.dump(run_data, fobj)
 
 
