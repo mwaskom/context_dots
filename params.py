@@ -68,7 +68,7 @@ punch_train.update(punch_base)
 
 behav_design = dict(
 
-    trials_per_run=50,
+    trials_per_run=100,
     early_cue_prob=.5,
 
 )
