@@ -9,7 +9,6 @@ import numpy as np
 from numpy.random import RandomState, randint, uniform, binomial
 from psychopy import visual, core, event
 from psychopy.data import StairHandler
-import psychopy.monitors.calibTools as calib
 import tools
 from tools import check_quit, wait_check_quit
 
@@ -22,10 +21,7 @@ def main(arglist):
     p.set_by_cmdline(arglist)
 
     # Open up the stimulus window
-    calib.monitorFolder = "./calib"
-    mon = calib.Monitor(p.monitor_name)
-    m = tools.WindowInfo(p, mon)
-    win = visual.Window(**m.window_kwargs)
+    win = tools.launch_window(p)
 
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None, mask="circle",

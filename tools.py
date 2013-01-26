@@ -10,6 +10,7 @@ from subprocess import call
 import numpy as np
 from numpy.random import permutation, multinomial
 from psychopy import core, event, visual
+import psychopy.monitors.calibTools as calib
 
 
 class Params(object):
@@ -284,6 +285,15 @@ class PresentationLoop(object):
         self.win.close()
         if hasattr(self, "fileobj"):
             self.fileobj.close()
+
+
+def launch_window(params):
+    """Open up a presentation window."""
+    calib.monitorFolder = "./calib"
+    mon = calib.Monitor(params.monitor_name)
+    m = WindowInfo(params, mon)
+    win = visual.Window(**m.window_kwargs)
+    return win
 
 
 def optimize_event_schedule(n_cat, n_total, max_repeat,
