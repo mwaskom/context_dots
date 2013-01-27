@@ -1,7 +1,6 @@
 from __future__ import division
 import sys
 from string import letters
-import json
 import pandas as pd
 import numpy as np
 from numpy.random import permutation
@@ -92,8 +91,6 @@ def behav(p):
             shuffle_these = (early == is_early).astype(bool)
             shuffler = np.random.permutation(shuffle_these.sum())
             context[shuffle_these] = context[shuffle_these][shuffler]
-            #motion[shuffle_these] = motion[shuffle_these][shuffler]
-            #color[shuffle_these] = color[shuffle_these][shuffler]
             for this_context in range(2):
                 # Now shuffle the features within each context and cue type
                 shuffle_those = shuffle_these & (context == this_context)
@@ -120,12 +117,16 @@ def behav(p):
 
         # Set up the full design as a DataFrame
         run_design = pd.DataFrame(dict(context=context,
+                                       early=early,
                                        motion=motion,
                                        color=color,
                                        context_freq=context_freq,
                                        motion_freq=motion_freq,
-                                       color_freq=color_freq,
-                                       early=early))
+                                       color_freq=color_freq),
+                                 columns=["context", "early",
+                                          "motion", "color",
+                                          "context_freq",
+                                          "motion_freq", "color_freq"])
 
         # Add in the target frequency, which is the
         # joint probability across context and coherent feature
@@ -136,19 +137,11 @@ def behav(p):
         run_design["target_freq"] = target_freq
 
         # Set up the outputs
-        fname_stem = "design/behav_%s" % letters[d_i]
+        fname = p.design_template % letters[d_i]
 
         # Save the full schedule as a csv
-        run_design.to_csv(fname_stem + ".csv",
+        run_design.to_csv(fname,
                           index_label="trial")
-
-        # Also save a json with some metadata
-        # (should probably add more of this)
-        run_data = dict(context_freqs=(m_freq, c_freq),
-                        motion_freqs=dir_freqs,
-                        color_freqs=hue_freqs)
-        with open(fname_stem + ".json", "w") as fobj:
-            json.dump(run_data, fobj)
 
 
 if __name__ == "__main__":
