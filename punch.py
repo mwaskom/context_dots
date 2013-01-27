@@ -6,7 +6,7 @@ from string import letters
 import colorsys
 import pandas as pd
 import numpy as np
-from numpy.random import RandomState, randint, uniform, binomial
+from numpy.random import RandomState, randint, uniform
 from psychopy import visual, core, event
 from psychopy.data import StairHandler
 import tools
@@ -24,53 +24,93 @@ def main(arglist):
     win = tools.launch_window(p)
 
     # Set up the stimulus objects
-    fix = visual.GratingStim(win, tex=None, mask="circle",
+    fix = visual.GratingStim(win, tex=None, mask=p.fix_shape,
                              color=p.fix_color, size=p.fix_size)
+
+    instruct_text = dedent(p.instruct_text)
+    instruct = tools.WaitText(win, instruct_text,
+                              height=p.instruct_size,
+                              advance_keys=p.wait_keys,
+                              quit_keys=p.quit_keys)
+
     stims = dict(frame=Frame(win, p),
                  dots=Dots(win, p),
-                 fix=fix)
+                 fix=fix,
+                 instruct=instruct,
+                 )
+
+    if hasattr(p, "break_text"):
+        break_text = dedent(p.break_text)
+        take_break = tools.WaitText(win, break_text,
+                                    height=p.break_text_size,
+                                    advance_keys=p.wait_keys,
+                                    quit_keys=p.quit_keys)
+        stims["break"] = take_break
+
+    # Excecute the experiment function
     globals()[mode](p, win, stims)
 
 
 def behav(p, win, stims):
 
-    state = RandomState(abs(hash(p.subject)))
-    choices = list(letters[:8])
-    p.sched_id = state.permutation(choices)[p.run - 1]
-    design_file = "design/behav_%s.csv" % p.sched_id
-    d = pd.read_csv(design_file)
-    n_trials = len(d)
+    # Max the screen brightness
+    tools.max_brightness(p.monitor_name)
 
-    tools.WaitText(win, "hello world", height=.7)(check_keys=["space"])
+    # Get the design
+    d = tools.load_design_csv(p)
+    p.n_trials = len(d)
 
+    # Draw the instructions
+    stims["instruct"].draw()
+
+    # Set up the object to show the stimulus
     stim_event = EventEngine(win, stims, p)
 
-    with tools.PresentationLoop(win):
-        for trial in xrange(n_trials):
+    # Set up the log files
+    d_cols = list(d.columns)
+    cols = d_cols +  ["cue_dur", "response", "rt", "correct"]
+    log = tools.DataLog(p, cols)
 
-            context = d.context[trial]
+    # Execute the experiment
+    with tools.PresentationLoop(win):
+        for t in xrange(p.n_trials):
+
+            # Get the info for this trial
+            t_info = {k: d[k][t] for k in d_cols}
+
+            context = d.context[t]
             stims["frame"].set_context(context)
 
-            if d.early[trial]:
-                early = True
-                cue_dur = uniform(*p.cue_dur)
-            else:
-                early = False
-                cue_dur = None
+            early = bool(d.early[t])
+            cue_dur = uniform(*p.cue_dur) if early else None
+            t_info["cue_dur"] = cue_dur
 
-            motion = d.motion[trial]
-            color = d.color[trial]
+            motion = d.motion[t]
+            color = d.color[t]
             target = [color, motion][context]
-            res = stim_event(context, motion, color, target, early, cue_dur)
 
+            # The stimulus event actually happens here
+            res = stim_event(context, motion, color,
+                             target, early, cue_dur)
+            t_info.update(res)
+            log.add_data(t_info)
+
+            # Post stim fixation
             stims["fix"].draw()
             win.flip()
             wait_check_quit(uniform(*p.iti))
 
+            # Every n trials, let the subject take a quick break
+            if t and not t % p.trials_bw_breaks:
+                stims["break"].draw()
+                stims["fix"].draw()
+                win.flip()
+                wait_check_quit(p.iti[1])
+
 
 def train(p, win, stims):
 
-    tools.WaitText(win, "hello world", height=.7)(check_keys=["space"])
+    stims["instruct"].draw()
 
     stim_event = EventEngine(win, stims, p, feedback=True)
 
@@ -83,7 +123,7 @@ def train(p, win, stims):
 
             for trial in xrange(p.n_per_block):
 
-                color = np.random.randint(len(p.dot_color_names))
+                color = np.random.randint(len(p.dot_colors))
                 direction = np.random.randint(len(p.dot_dirs))
                 target = color if context == "color" else direction
                 res = stim_event(color, direction, context, target)
@@ -122,7 +162,7 @@ class EventEngine(object):
 
         # Debugging information
         if self.debug:
-            color_name = self.p.dot_color_names[color]
+            color_name = self.p.dot_colors[color]
             direction_deg = self.p.dot_dirs[direction]
             msg1 = "Orient: %s   Color: %s" % (color_name, direction_deg)
             self.debug_text[0].setText(msg1)
@@ -142,7 +182,7 @@ class EventEngine(object):
         # Main Stimulus Presentation
         resp_clock = core.Clock()
         event.clearEvents()
-        for frame in xrange(self.p.stim_flips):
+        for frame in xrange(self.p.stim_dur * 60): # TODO?
             self.fix.draw()
             self.dots.draw()
             self.frame.draw()
@@ -152,6 +192,7 @@ class EventEngine(object):
             self.win.flip()
 
         # Response Collection
+        response = None
         correct = False
         rt = np.nan
         keys = event.getKeys(timeStamped=resp_clock)
@@ -160,9 +201,9 @@ class EventEngine(object):
                 print "Subject quit execution"
                 core.quit()
             elif key in self.resp_keys:
-                key_idx = self.resp_keys.index(key)
+                response = self.resp_keys.index(key)
                 rt = stamp
-                if key_idx == target:
+                if response == target:
                     correct = True
 
         # Feedback
@@ -178,7 +219,9 @@ class EventEngine(object):
 
             self.frame.reset_phase()
 
-        return None
+        result = dict(correct=correct, rt=rt, response=response)
+
+        return result
 
 
 class Frame(object):
@@ -240,26 +283,26 @@ class Dots(object):
     def __init__(self, win, p):
 
         self.speed = p.dot_speed / 60
-        self.colors = p.dot_color_names
+        self.colors = p.dot_colors
         self.dot_base_hue = p.dot_base_hue
         self.dot_sat = p.dot_sat
         self.dot_val = p.dot_val
         self.dirs = p.dot_dirs
         self.field_size = p.field_size
-        self.ndots = p.dot_number
+        self.ndots = p.dot_count
         self.dot_life_mean = p.dot_life_mean
         self.dot_life_std = p.dot_life_std
-        self.dimension = len(p.dot_color_names)
+        self.dimension = len(p.dot_colors)
         assert self.dimension == len(p.dot_dirs)
 
         dot_shape = None if p.dot_shape == "square" else p.dot_shape
         self.dots = visual.ElementArrayStim(win, "deg",
                                             fieldShape="square",
                                             fieldSize=p.field_size,
-                                            nElements=p.dot_number,
+                                            nElements=p.dot_count,
                                             sizes=p.dot_size,
                                             elementMask=dot_shape,
-                                            colors=np.ones((p.dot_number, 3)),
+                                            colors=np.ones((p.dot_count, 3)),
                                             elementTex=None,
                                             )
 
@@ -267,7 +310,7 @@ class Dots(object):
 
         self.dot_life = np.round(np.random.normal(p.dot_life_mean,
                                                   p.dot_life_std,
-                                                  size=p.dot_number))
+                                                  size=p.dot_count))
 
     def new_signals(self, col_coh, mot_coh):
 
@@ -302,7 +345,7 @@ class Dots(object):
 
         dirs = np.random.uniform(size=self.ndots) * 2 * np.pi
         dirs[self.mot_signal] = np.deg2rad(self.dirs[target_dir])
-        self._dot_dirs = dirs
+        self._directions = dirs
 
     def new_positions(self, mask=None):
 
@@ -324,8 +367,8 @@ class Dots(object):
     def draw(self):
 
         xys = self.dots.xys
-        xys[:, 0] += self.speed * np.cos(self._dot_dirs)
-        xys[:, 1] += self.speed * np.sin(self._dot_dirs)
+        xys[:, 0] += self.speed * np.cos(self._directions)
+        xys[:, 1] += self.speed * np.sin(self._directions)
         bound = self.field_size / 2
         self.dots.setXYs(xys)
         out_of_bounds = np.any(np.abs(xys) > bound, axis=1)

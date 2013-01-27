@@ -5,10 +5,13 @@ import sys
 import time
 import json
 import argparse
+from glob import glob
+from string import letters
 from math import floor
 from subprocess import call
 import numpy as np
-from numpy.random import permutation, multinomial
+import pandas as pd
+from numpy.random import RandomState, permutation, multinomial
 from psychopy import core, event, visual
 import psychopy.monitors.calibTools as calib
 
@@ -75,17 +78,54 @@ class Params(object):
 
     def to_json(self, fname):
         """Save the parameters to a .json"""
-        if not fname.endswith(".json"):
-            fname += ".json"
-        fid = file(fname, "w")
         # Strip the OOP hooks
         data = dict([(k, v) for k, v in self.__dict__.items()
                      if not k.startswith("_")])
         # Strip the param module
         del data["param_module"]
 
-        # Save to JSON
-        json.dump(data, fid, sort_keys=True, indent=4)
+        if not fname.endswith(".json"):
+            fname += ".json"
+        with open(fname, "w") as fid:
+            # Save to JSON
+            json.dump(data, fid, sort_keys=True, indent=4)
+
+
+class DataLog(object):
+    """Holds info about file that gets updated throughout experiment."""
+    def __init__(self, p, columns):
+        """Set things up."""
+        self.p = p
+        self.columns = columns
+
+        # Figure out the name and clear out old files
+        fname = p.log_base % dict(subject=p.subject, run=p.run) + ".csv"
+        archive_old_version(fname)
+        self.fname = fname
+
+        # Write the column header
+        column_string = ",".join(map(str, columns)) + "\n"
+        with open(fname, "w") as fid:
+            fid.write(column_string)
+
+    def add_data(self, data_dict):
+        """Add a line of data based on a dictionary and stored columns."""
+        data_list = [str(data_dict.get(col, None)) for col in self.columns]
+        data_str = ",".join(data_list) + "\n"
+        with open(self.fname, "a") as fid:
+            fid.write(data_str)
+
+
+def archive_old_version(fname):
+    """Move a data file to an numbered archive version, if exists."""
+    if not os.path.exists(fname):
+        return
+
+    base, ext = os.path.splitext(fname)
+    n_existing = len(glob(base + "_*" + ext))
+    n_current = n_existing + 1
+    new_fname = "%s_%d%s" % (base, n_current, ext)
+    os.rename(fname, new_fname)
 
 
 def start_data_file(subject_id, exp, run, train):
@@ -217,6 +257,16 @@ def flip(p=0.5):
     return np.random.binomial(1, p)
 
 
+def load_design_csv(params):
+
+    state = RandomState(abs(hash(params.subject)))
+    choices = list(letters[:params.n_designs])
+    params.sched_id = state.permutation(choices)[params.run - 1]
+    design_file = params.design_template % params.sched_id
+    design = pd.read_csv(design_file, index_col="trial")
+    return design
+
+
 class WindowInfo(object):
     """Container for monitor information."""
     def __init__(self, params, monitor):
@@ -246,18 +296,20 @@ class WindowInfo(object):
 
 class WaitText(object):
     """A class for showing text on the screen until a key is pressed. """
-    def __init__(self, win, text='Press a key to continue', **kwargs):
-        """Set the text stimulus information.
-
-        Will do the default thing(show 'text' in white
-        unless you pass in kwargs, which will just go through to
-        visual.TextStim.
-
-        """
+    def __init__(self, win, text="Press a key to continue",
+                 advance_keys=None, quit_keys=None, **kwargs):
+        """Set the text stimulus information."""
         self.win = win
+        if advance_keys is None:
+            advance_keys = ["space"]
+        self.advance_keys = advance_keys
+        if quit_keys is None:
+            quit_keys = ["escape", "q"]
+        self.quit_keys = quit_keys
+        self.listen_keys = quit_keys + advance_keys
         self.text = visual.TextStim(win, text=text, **kwargs)
 
-    def __call__(self, check_keys=None, duration=np.inf):
+    def draw(self, duration=np.inf):
         """Dislpay text until a key is pressed or until duration elapses."""
         clock = core.Clock()
         t = 0
@@ -266,8 +318,10 @@ class WaitText(object):
             t = clock.getTime()
             self.text.draw()
             self.win.flip()
-            for key in event.getKeys(keyList=check_keys):
-                if key:
+            for key in event.getKeys(keyList=self.listen_keys):
+                if key in self.quit_keys:
+                    core.quit()
+                elif key in self.advance_keys:
                     return
 
 
