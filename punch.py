@@ -1,16 +1,12 @@
 from __future__ import division
 import sys
-import os.path as op
-from textwrap import dedent
-from string import letters
 import colorsys
+from textwrap import dedent
 import pandas as pd
 import numpy as np
-from numpy.random import RandomState, randint, uniform
+from numpy.random import randint, uniform
 from psychopy import visual, core, event
-from psychopy.data import StairHandler
 import tools
-from tools import check_quit, wait_check_quit
 
 
 def main(arglist):
@@ -47,6 +43,14 @@ def main(arglist):
                                     quit_keys=p.quit_keys)
         stims["break"] = take_break
 
+    if hasattr(p, "finish_text"):
+        finish_text = dedent(p.finish_text)
+        finish_run = tools.WaitText(win, finish_text,
+                                    height=p.break_text_size,
+                                    advance_keys=p.wait_keys,
+                                    quit_keys=p.quit_keys)
+        stims["finish"] = finish_run
+
     # Excecute the experiment function
     globals()[mode](p, win, stims)
 
@@ -63,16 +67,18 @@ def behav(p, win, stims):
     # Draw the instructions
     stims["instruct"].draw()
 
-    # Set up the object to show the stimulus
+    # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p)
 
     # Set up the log files
     d_cols = list(d.columns)
-    cols = d_cols +  ["cue_dur", "response", "rt", "correct"]
-    log = tools.DataLog(p, cols)
+    log_cols = d_cols + ["cue_dur", "response", "rt", "correct",
+                         "onset_time", "dropped_frames"]
+    log = tools.DataLog(p, log_cols)
 
     # Execute the experiment
-    with tools.PresentationLoop(win):
+    with tools.PresentationLoop(win, log, behav_summary):
+        stim_event.clock.reset()
         for t in xrange(p.n_trials):
 
             # Get the info for this trial
@@ -98,40 +104,126 @@ def behav(p, win, stims):
             # Post stim fixation
             stims["fix"].draw()
             win.flip()
-            wait_check_quit(uniform(*p.iti))
+            tools.wait_check_quit(uniform(*p.iti))
 
             # Every n trials, let the subject take a quick break
             if t and not t % p.trials_bw_breaks:
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                wait_check_quit(p.iti[1])
+                tools.wait_check_quit(p.iti[1])
+
+        stims["finish"].draw()
 
 
 def train(p, win, stims):
 
+    # Max the screen brightness
+    tools.max_brightness(p.monitor_name)
+
+    # Draw the instructions
     stims["instruct"].draw()
 
+    # Set up the log object
+    log_cols = ["block", "learned", "settled", "context",
+                "motion", "color", "motion_coh", "color_coh",
+                "correct", "rt", "response", "onset_time",
+                "dropped_frames"]
+    log = tools.DataLog(p, log_cols)
+
+    # Setup the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p, feedback=True)
 
+    learned = False
+    settled = False
     trained = False
+    coh_list = [1, 1]
+    context_good = [0, 0]
+    motion_rts = []
+    color_adj = -1
+    color_reversals = 0
+
+    block = 0
     with tools.PresentationLoop(win):
+        stim_event.clock.reset()
         while not trained:
 
-            context = randint(2)
+            block_rts = []
+            block_acc = []
+
+            context = block % 2
             stims["frame"].set_context(context)
+            stims["dots"].new_signals(*coh_list)
+
+            block_info = dict(block=block, context=context,
+                              learned=learned, settled=settled,
+                              motion_coh=coh_list[0],
+                              color_coh=coh_list[1])
+
+            stims["fix"].draw()
+            stims["frame"].draw()
+            win.flip()
+            tools.wait_check_quit(p.iti[1])
 
             for trial in xrange(p.n_per_block):
 
-                color = np.random.randint(len(p.dot_colors))
-                direction = np.random.randint(len(p.dot_dirs))
-                target = color if context == "color" else direction
-                res = stim_event(color, direction, context, target)
+                motion = randint(len(p.dot_dirs))
+                color = randint(len(p.dot_colors))
+                target = color if context else motion
+
+                t_info = dict(motion=motion, color=color)
+                t_info.update(block_info)
+
+                res = stim_event(context, motion, color, target)
+                t_info.update(res)
+                log.add_data(t_info)
+
+                block_rts.append(res["rt"])
+                block_acc.append(res["correct"])
 
                 stims["fix"].draw()
                 stims["frame"].draw()
                 win.flip()
-                wait_check_quit(uniform(*p.iti))
+                tools.wait_check_quit(uniform(*p.iti))
+
+            # Every n trials, let the subject take a quick break
+            if block and not block % p.blocks_bw_break:
+                stims["break"].draw()
+                stims["fix"].draw()
+                win.flip()
+                tools.wait_check_quit(p.iti[1])
+
+            block += 1
+
+            # Update the training information
+            if learned:
+                if settled:
+                    if context:
+                        motion_mean = np.mean(motion_rts)
+                        block_med = np.mean(block_rts)
+                        if color_adj == -1:
+                            reverse = block_med > motion_mean
+                        else:
+                            reverse = block_med < motion_mean
+                        if reverse:
+                            color_adj *= -1
+                            color_reversals += 1
+                        coh_list[1] += color_adj * p.color_coh_step
+                        if color_reversals > p.color_coh_reversals:
+                            trained = True
+                    else:
+                        motion_rts.append(np.median(block_rts))
+                else:
+                    coh_list = [c - p.settle_slope for c in coh_list]
+                    if abs(coh_list[0] - p.motion_coh_target) < 1e-6:
+                        settled = True
+            else:
+                if np.mean(block_acc) >= p.full_coh_thresh:
+                    context_good[context] += 1
+                if all([g >= p.at_thresh_blocks for g in context_good]):
+                    learned = True
+
+        stims["finish"].draw()
 
 
 class EventEngine(object):
@@ -146,6 +238,7 @@ class EventEngine(object):
         self.frame = stims["frame"]
         self.dots = stims["dots"]
         self.resp_keys = p.resp_keys
+        self.clock = core.Clock()
         self.debug = p.debug
         if self.debug:
             self.debug_text = [visual.TextStim(win,
@@ -155,34 +248,34 @@ class EventEngine(object):
                                                pos=(0.0, 5.0),
                                                height=0.5)]
 
-    def __call__(self, context, direction, color, target,
+    def __call__(self, context, motion, color, target,
                  early=False, cue_dur=0):
 
         self.dots.new_positions()
 
         # Debugging information
         if self.debug:
+            motion_deg = self.p.dot_dirs[motion]
             color_name = self.p.dot_colors[color]
-            direction_deg = self.p.dot_dirs[direction]
-            msg1 = "Orient: %s   Color: %s" % (color_name, direction_deg)
+            msg1 = "Motion: %d   Color: %s" % (motion_deg, color_name)
             self.debug_text[0].setText(msg1)
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
         self.dots.new_colors(color)
-        self.dots.new_directions(direction)
+        self.dots.new_directions(motion)
 
         # Early Cue Presentation
         if early:
             self.frame.draw()
             self.fix.draw()
             self.win.flip()
-            wait_check_quit(cue_dur)
+            tools.wait_check_quit(cue_dur)
 
         # Main Stimulus Presentation
-        resp_clock = core.Clock()
+        dropped_before = self.win.nDroppedFrames
         event.clearEvents()
-        for frame in xrange(self.p.stim_dur * 60): # TODO?
+        for frame in xrange(self.p.stim_dur * 60):
             self.fix.draw()
             self.dots.draw()
             self.frame.draw()
@@ -190,6 +283,11 @@ class EventEngine(object):
                 for text in self.debug_text:
                     text.draw()
             self.win.flip()
+            if not frame:
+                resp_clock = core.Clock()
+                onset_time = self.clock.getTime()
+        dropped_after = self.win.nDroppedFrames
+        dropped_frames = dropped_after - dropped_before
 
         # Response Collection
         response = None
@@ -219,7 +317,8 @@ class EventEngine(object):
 
             self.frame.reset_phase()
 
-        result = dict(correct=correct, rt=rt, response=response)
+        result = dict(correct=correct, rt=rt, response=response,
+                      onset_time=onset_time, dropped_frames=dropped_frames)
 
         return result
 
@@ -306,16 +405,16 @@ class Dots(object):
                                             elementTex=None,
                                             )
 
-        self.new_signals(p.dot_col_coh, p.dot_mot_coh)
+        self.new_signals(p.dot_mot_coh, p.dot_col_coh)
 
         self.dot_life = np.round(np.random.normal(p.dot_life_mean,
                                                   p.dot_life_std,
                                                   size=p.dot_count))
 
-    def new_signals(self, col_coh, mot_coh):
+    def new_signals(self, mot_coh, col_coh):
 
-        col_signal = np.zeros(self.ndots, bool)
         mot_signal = np.zeros(self.ndots, bool)
+        col_signal = np.zeros(self.ndots, bool)
 
         n_col_signal = col_coh * self.ndots
         col_signal[:n_col_signal] = True
@@ -382,6 +481,15 @@ class Dots(object):
                              size=self.ndots))
 
         self.dots.draw()
+
+
+def behav_summary(log):
+    """Gets executed at the end of a behavioral run."""
+    run_df = pd.read_csv(log.fname)
+    print "Overall Accuracy: %.2f" % run_df.correct.mean()
+    print run_df.groupby("context").correct.mean()
+    print "Average RT: %.2f" % run_df.correct.mean()
+    print run_df.groupby("context").rt.mean()
 
 
 if __name__ == "__main__":

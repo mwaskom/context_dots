@@ -5,6 +5,7 @@ import sys
 import time
 import json
 import argparse
+import subprocess
 from glob import glob
 from string import letters
 from math import floor
@@ -37,8 +38,11 @@ class Params(object):
         im = __import__(p_file)
         self.param_module = im
         param_dict = getattr(im, exp_name)
-        for key, val in param_dict.items():
+        for key, val in param_dict.iteritems():
             setattr(self, key, val)
+
+        self.time = time.asctime()
+        self.git_hash = git_hash()
 
     def set_by_cmdline(self, arglist):
         """Get runtime parameters off the commandline."""
@@ -78,16 +82,14 @@ class Params(object):
 
     def to_json(self, fname):
         """Save the parameters to a .json"""
-        # Strip the OOP hooks
         data = dict([(k, v) for k, v in self.__dict__.items()
                      if not k.startswith("_")])
-        # Strip the param module
         del data["param_module"]
 
         if not fname.endswith(".json"):
             fname += ".json"
+        archive_old_version(fname)
         with open(fname, "w") as fid:
-            # Save to JSON
             json.dump(data, fid, sort_keys=True, indent=4)
 
 
@@ -99,13 +101,16 @@ class DataLog(object):
         self.columns = columns
 
         # Figure out the name and clear out old files
-        fname = p.log_base % dict(subject=p.subject, run=p.run) + ".csv"
-        archive_old_version(fname)
-        self.fname = fname
+        fname_base = p.log_base % dict(subject=p.subject, run=p.run)
+        self.fname = fname_base + ".csv"
+        archive_old_version(self.fname)
+
+        # Save the parameters to
+        p.to_json(fname_base)
 
         # Write the column header
         column_string = ",".join(map(str, columns)) + "\n"
-        with open(fname, "w") as fid:
+        with open(self.fname, "w") as fid:
             fid.write(column_string)
 
     def add_data(self, data_dict):
@@ -128,28 +133,12 @@ def archive_old_version(fname):
     os.rename(fname, new_fname)
 
 
-def start_data_file(subject_id, exp, run, train):
-    """Start a file object into which you will write the data.
-
-    Makes sure sure not to over-write previously existing files.
-
-    """
-    list_data_dir = os.listdir('./data')
-    label = {True: "train", False: "run"}[train]
-
-    i = 1
-    data_file = '%s_%s_%s%02d_%d.csv' % (subject_id, exp, label, run, i)
-    while data_file in list_data_dir:
-        i += 1
-        data_file = '%s_%s_%s%02d_%d.csv' % (subject_id, exp, label, run, i)
-
-    #Open the file for writing into:
-    f = file('./data/%s' % data_file, 'w')
-
-    #Write some header information
-    f.write('# time : %s\n' % (time.asctime()))
-
-    return f, data_file
+def git_hash():
+    """Get the commit hash for the HEAD commmit."""
+    out = subprocess.Popen("git rev-parse HEAD",
+                           stdout=subprocess.PIPE, shell=True)
+    hash = out.communicate()[0].strip()
+    return hash
 
 
 def max_brightness(monitor):
@@ -161,24 +150,12 @@ def max_brightness(monitor):
             print "Could not modify screen brightness"
 
 
-def save_data(f, *dataline):
-
-    for a in dataline[0:-1]:
-        f.write('%s,' % a)
-
-    #Don't put a comma after the last one:
-    f.write('%s\n' % dataline[-1])
-
-    return f
-
-
-def check_quit(quit_keys=None):
+def check_quit(quit_keys=["q", "escape"]):
     """Check if we got a quit key signal and exit if so."""
-    if quit_keys is None:
-        quit_keys = ["q", "escape"]
     keys = event.getKeys(keyList=quit_keys)
     for key in keys:
         if key in quit_keys:
+            print "Subject quit execution"
             core.quit()
     event.clearEvents()
 
@@ -197,7 +174,7 @@ def wait_check_quit(wait_time, quit_keys=None):
 
 
 def wait_for_trigger(win, params):
-
+    """Hold presentation until we hear trigger keys."""
     event.clearEvents()
     visual.TextStim(win, text="Get ready!").draw()
     win.flip()
@@ -327,8 +304,12 @@ class WaitText(object):
 
 class PresentationLoop(object):
 
-    def __init__(self, win, fileobj=None):
+    def __init__(self, win, log=None, exit_func=None, fileobj=None):
         self.win = win
+        if log is not None:
+            self.log = log
+        if exit_func is not None:
+            self.exit_func = exit_func
         if fileobj is not None:
             self.fileobj = fileobj
 
@@ -339,6 +320,8 @@ class PresentationLoop(object):
         self.win.close()
         if hasattr(self, "fileobj"):
             self.fileobj.close()
+        if hasattr(self, "exit_func"):
+            self.exit_func(self.log)
 
 
 def launch_window(params):

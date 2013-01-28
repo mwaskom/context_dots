@@ -44,6 +44,19 @@ punch_base = dict(
 
     # Timing
     stim_dur=3,  # seconds
+    iti=(.5, 2.5),  # uniform params (s)
+
+    # Communication
+    break_text_size=0.8,
+    break_text="""
+            Take a quick break, if you'd like!
+            Press space to start the next block
+            """,
+    finish_text="""
+                Run Finished!
+
+        Please tell the experimenter!
+        """,
 
 )
 
@@ -61,17 +74,24 @@ punch_behav = dict(
 
     monitor_name='mlw-mbair',
     cue_dur=(1, 1.25),
-    iti=(.5, 2.5),
 
     log_base="data/%(subject)s_run%(run)d",
 
+    instruct_size=0.5,
     instruct_text="""
         Look at
         all the pretty dots""",
-    instruct_size=0.5,
 
-    break_text_size=0.8,
-    break_text="""hang tight""",
+    break_text_size=0.5,
+    break_text="""
+        Take a quick break, if you'd like!
+        Press space to start the next block
+            """,
+    finish_text="""
+                Run Finished!
+
+        Please tell the experimenter!
+        """,
 
     trials_bw_breaks=20,
 
@@ -81,12 +101,29 @@ punch_behav.update(behav_base)
 # Top-level parameters for training/staircase
 punch_train = dict(
 
+    monitor_name='mlw-mbair',
+    log_base="data/%(subject)s_training",
+
     # Experimental variables
-    n_per_block=6,
+    n_per_block=2,
+    full_coh_thresh=1,
+    at_thresh_blocks=1,
+    settle_slope=.7 / 2,
+    motion_coh_target=.3,
+    color_coh_step=.05,
+    color_coh_reversals=3,
+    blocks_bw_break=4,
 
     # Feedback
     fb_freq=6,
     fb_dur=1,
+
+    # Instructions
+    instruct_size=0.5,
+    instruct_text="""
+        Look at the dots and learn some shit
+        """,
+
 
 )
 punch_train.update(punch_base)
