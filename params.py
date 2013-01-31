@@ -29,11 +29,11 @@ punch_base = dict(
     dot_size=.1,  # in degrees
     dot_life_mean=60,  # in frames
     dot_life_std=20,  # in frames
-    dot_colors=["red", "cyan"],
-    dot_dirs=[90, 270],
     dot_mot_coh=.3,  # pct dots moving coherently
     dot_col_coh=.3,  # pct dots in target color
-    dot_base_hue=0,
+    dot_dirs=[90, 270],
+    dot_colors=["yellow", "cyan"],
+    dot_hues=[1./6, .5],  # hue coordinates in hsv space
     dot_sat=1,
     dot_val=1,
 
@@ -105,17 +105,17 @@ punch_train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=2,
+    n_per_block=8,
     full_coh_thresh=1,
-    at_thresh_blocks=1,
-    settle_slope=.7 / 2,
+    at_thresh_blocks=2,
+    settle_slope=.1,
     motion_coh_target=.3,
     color_coh_step=.05,
     color_coh_reversals=3,
     blocks_bw_break=4,
 
     # Feedback
-    fb_freq=6,
+    fb_freq=10,
     fb_dur=1,
 
     # Instructions
@@ -136,3 +136,5 @@ behav_design = dict(
 
 )
 behav_design.update(behav_base)
+
+punch_demo = punch_train

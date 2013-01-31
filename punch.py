@@ -5,6 +5,7 @@ from textwrap import dedent
 import pandas as pd
 import numpy as np
 from numpy.random import randint, uniform
+from scipy import stats
 from psychopy import visual, core, event
 import tools
 
@@ -93,7 +94,7 @@ def behav(p, win, stims):
 
             motion = d.motion[t]
             color = d.color[t]
-            target = [color, motion][context]
+            target = [motion, color][context]
 
             # The stimulus event actually happens here
             res = stim_event(context, motion, color,
@@ -137,14 +138,14 @@ def train(p, win, stims):
     learned = False
     settled = False
     trained = False
-    coh_list = [1, 1]
+    coherences = [1, 1]
     context_good = [0, 0]
     motion_rts = []
     color_adj = -1
     color_reversals = 0
 
     block = 0
-    with tools.PresentationLoop(win):
+    with tools.PresentationLoop(win, log, train_summary):
         stim_event.clock.reset()
         while not trained:
 
@@ -153,12 +154,12 @@ def train(p, win, stims):
 
             context = block % 2
             stims["frame"].set_context(context)
-            stims["dots"].new_signals(*coh_list)
+            stims["dots"].new_signals(*coherences)
 
             block_info = dict(block=block, context=context,
                               learned=learned, settled=settled,
-                              motion_coh=coh_list[0],
-                              color_coh=coh_list[1])
+                              motion_coh=coherences[0],
+                              color_coh=coherences[1])
 
             stims["fix"].draw()
             stims["frame"].draw()
@@ -199,8 +200,8 @@ def train(p, win, stims):
             if learned:
                 if settled:
                     if context:
-                        motion_mean = np.mean(motion_rts)
-                        block_med = np.mean(block_rts)
+                        motion_mean = stats.nanmean(motion_rts)
+                        block_med = stats.nanmedian(block_rts)
                         if color_adj == -1:
                             reverse = block_med > motion_mean
                         else:
@@ -208,15 +209,16 @@ def train(p, win, stims):
                         if reverse:
                             color_adj *= -1
                             color_reversals += 1
-                        coh_list[1] += color_adj * p.color_coh_step
+                        coherences[1] += color_adj * p.color_coh_step
                         if color_reversals > p.color_coh_reversals:
                             trained = True
                     else:
-                        motion_rts.append(np.median(block_rts))
+                        motion_rts.append(stats.nanmedian(block_rts))
                 else:
-                    coh_list = [c - p.settle_slope for c in coh_list]
-                    if abs(coh_list[0] - p.motion_coh_target) < 1e-6:
-                        settled = True
+                    if context:
+                        coherences = [c - p.settle_slope for c in coherences]
+                        if abs(coherences[0] - p.motion_coh_target) < 1e-6:
+                            settled = True
             else:
                 if np.mean(block_acc) >= p.full_coh_thresh:
                     context_good[context] += 1
@@ -224,6 +226,48 @@ def train(p, win, stims):
                     learned = True
 
         stims["finish"].draw()
+        print "Final color coherence: %.2f" % coherences[1]
+
+
+def demo(p, win, stims):
+
+    frame = stims["frame"]
+    fix = stims["fix"]
+    stims["dots"].new_signals(*[p.motion_coh_target] * 2)
+
+    stim_event = EventEngine(win, stims, p)
+    frame.set_context(0)
+
+    tools.wait_and_listen("space")
+
+    stim_event(0, 0, 0, 0)
+    win.flip()
+    tools.wait_and_listen("space")
+
+    stim_event(0, 0, 0, 0)
+    win.flip()
+    tools.wait_and_listen("space")
+
+    for context in [0, 1]:
+        frame.set_context(context)
+        frame.draw()
+        fix.draw()
+        win.flip()
+        tools.wait_and_listen("space")
+
+    for context in [0, 1]:
+        frame.set_context(context)
+        frame.draw()
+        fix.draw()
+        win.flip()
+        tools.wait_and_listen("space")
+        for refresh in xrange(p.fb_dur * 60):
+            if not refresh % p.fb_freq:
+                frame.flip_phase()
+            frame.draw()
+            fix.draw()
+            win.flip()
+        tools.wait_and_listen("space")
 
 
 class EventEngine(object):
@@ -240,6 +284,9 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.clock = core.Clock()
         self.debug = p.debug
+        if feedback:
+            self.fb_dur = p.fb_dur
+            self.fb_freq = p.fb_freq
         if self.debug:
             self.debug_text = [visual.TextStim(win,
                                                pos=(0.0, -5.0),
@@ -306,10 +353,8 @@ class EventEngine(object):
 
         # Feedback
         if self.feedback and not correct:
-            for frame in xrange(60):
-            #for frame in xrange(self.p.fb_frames):
-                if not frame % 10:
-                #if not frame % self.p.fb_freq:
+            for frame in xrange(self.fb_dur * 60):
+                if not frame % self.fb_freq:
                     self.frame.flip_phase()
                 self.frame.draw()
                 self.fix.draw()
@@ -383,7 +428,7 @@ class Dots(object):
 
         self.speed = p.dot_speed / 60
         self.colors = p.dot_colors
-        self.dot_base_hue = p.dot_base_hue
+        self.dot_hues = p.dot_hues
         self.dot_sat = p.dot_sat
         self.dot_val = p.dot_val
         self.dirs = p.dot_dirs
@@ -430,9 +475,7 @@ class Dots(object):
     def new_colors(self, target_color):
 
         hues = np.random.uniform(size=self.ndots)
-        t_hue = target_color / self.dimension
-        t_hue = t_hue + self.dot_base_hue
-        t_hue = t_hue - np.floor(t_hue)
+        t_hue = self.dot_hues[target_color]
         hues[self.col_signal] = t_hue
         s = self.dot_sat
         v = self.dot_val
@@ -491,6 +534,11 @@ def behav_summary(log):
     print "Average RT: %.2f" % run_df.correct.mean()
     print run_df.groupby("context").rt.mean()
 
+
+def train_summary(log):
+    """Gets executed at the end of training."""
+    df = pd.read_csv(log.fname)
+    print "Training took %d blocks" % df.block.unique().size
 
 if __name__ == "__main__":
     main(sys.argv[1:])

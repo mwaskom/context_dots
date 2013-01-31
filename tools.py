@@ -202,6 +202,15 @@ def precise_wait(win, clock, end_time, stim, refresh_rate=60):
         check_quit()
 
 
+def wait_and_listen(listen_for):
+
+    should_wait = True
+    while should_wait:
+        for key in event.getKeys():
+            if key == listen_for:
+                should_wait = False
+
+
 def draw_all(in_list):
 
     for stim in in_list:
