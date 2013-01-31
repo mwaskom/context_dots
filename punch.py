@@ -74,7 +74,7 @@ def behav(p, win, stims):
     # Set up the log files
     d_cols = list(d.columns)
     log_cols = d_cols + ["cue_dur", "response", "rt", "correct",
-                         "onset_time", "dropped_frames"]
+                         "isi", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
     # Execute the experiment
@@ -96,16 +96,18 @@ def behav(p, win, stims):
             color = d.color[t]
             target = [motion, color][context]
 
+            # Pre-stim fixation
+            isi = uniform(*p.iti)
+            t_info["isi"] = isi
+            stims["fix"].draw()
+            win.flip()
+            tools.wait_check_quit(uniform(*p.iti))
+
             # The stimulus event actually happens here
             res = stim_event(context, motion, color,
                              target, early, cue_dur)
             t_info.update(res)
             log.add_data(t_info)
-
-            # Post stim fixation
-            stims["fix"].draw()
-            win.flip()
-            tools.wait_check_quit(uniform(*p.iti))
 
             # Every n trials, let the subject take a quick break
             if t and not t % p.trials_bw_breaks:
