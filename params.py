@@ -23,7 +23,7 @@ punch_base = dict(
     frame_sfs=[2, 4.5],
 
     # Dots
-    dot_count=140,
+    dot_count=128,
     dot_shape="circle",
     dot_speed=3,  # in degrees/sec
     dot_size=.1,  # in degrees
@@ -33,7 +33,7 @@ punch_base = dict(
     dot_col_coh=.3,  # pct dots in target color
     dot_dirs=[90, 270],
     dot_colors=["yellow", "cyan"],
-    dot_hues=[1./6, .5],  # hue coordinates in hsv space
+    dot_hues=[1. / 6, .5],  # hue coordinates in hsv space
     dot_sat=1,
     dot_val=1,
 
@@ -43,11 +43,11 @@ punch_base = dict(
     wait_keys=["space"],
 
     # Timing
-    stim_dur=3,  # seconds
+    stim_dur=2,     # seconds
     iti=(.5, 2.5),  # uniform params (s)
 
     # Communication
-    break_text_size=0.8,
+    break_text_size=0.5,
     break_text="""
             Take a quick break, if you'd like!
             Press space to start the next block
@@ -75,7 +75,7 @@ punch_behav = dict(
     monitor_name='mlw-mbair',
     cue_dur=(1, 1.25),
 
-    log_base="data/%(subject)s_run%(run)d",
+    log_base="data/%(subject)s_behav_run%(run)d",
 
     instruct_size=0.5,
     instruct_text="""

@@ -108,6 +108,7 @@ def behav(p):
         assert context.sum() / p.trials_per_run == context_freqs[1]
         assert motion.sum() / p.trials_per_run == motion_freqs[1]
         assert color.sum() / p.trials_per_run == color_freqs[1]
+        assert early.mean() == p.early_cue_prob
 
         # Make a vector of the frequency values we care
         # about for each trial (will make analysis easier)
@@ -123,18 +124,28 @@ def behav(p):
                                        context_freq=context_freq,
                                        motion_freq=motion_freq,
                                        color_freq=color_freq),
-                                 columns=["context", "early",
-                                          "motion", "color",
-                                          "context_freq",
-                                          "motion_freq", "color_freq"])
+                                  columns=["context", "early",
+                                           "motion", "color",
+                                           "context_freq",
+                                           "motion_freq", "color_freq"])
 
         # Add in the target frequency, which is the
         # joint probability across context and coherent feature
+        # and also the response frequency
         target_freq = np.zeros(p.trials_per_run)
+        target = np.zeros(len(run_design))
         for c_i, c_name in enumerate(["motion", "color"]):
             f_freq = run_design["%s_freq" % c_name]
-            target_freq[context == c_i] = f_freq * context_freqs[c_i]
+            mask = context == c_i
+            target_freq[mask] = f_freq * context_freqs[c_i]
+            target[mask] = run_design[c_name][mask]
         run_design["target_freq"] = target_freq
+        butt1_freq = target.mean()
+        response_freq = np.where(target, 1 - butt1_freq, butt1_freq)
+        run_design["response_freq"] = response_freq
+
+        # Add in a column about congruency for later analysis
+        run_design["congruent"] = run_design["motion"] == run_design["color"]
 
         # Set up the outputs
         fname = p.design_template % letters[d_i]
