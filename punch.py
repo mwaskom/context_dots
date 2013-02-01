@@ -101,7 +101,7 @@ def behav(p, win, stims):
             t_info["isi"] = isi
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(uniform(*p.iti))
+            tools.wait_check_quit(uniform(*p.isi))
 
             # The stimulus event actually happens here
             res = stim_event(context, motion, color,
@@ -114,7 +114,7 @@ def behav(p, win, stims):
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                tools.wait_check_quit(p.iti[1])
+                tools.wait_check_quit(p.isi[1])
 
         stims["finish"].draw()
 
@@ -166,7 +166,7 @@ def train(p, win, stims):
             stims["fix"].draw()
             stims["frame"].draw()
             win.flip()
-            tools.wait_check_quit(p.iti[1])
+            tools.wait_check_quit(p.isi[1])
 
             for trial in xrange(p.n_per_block):
 
@@ -187,14 +187,14 @@ def train(p, win, stims):
                 stims["fix"].draw()
                 stims["frame"].draw()
                 win.flip()
-                tools.wait_check_quit(uniform(*p.iti))
+                tools.wait_check_quit(uniform(*p.isi))
 
             # Every n trials, let the subject take a quick break
             if block and not block % p.blocks_bw_break:
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                tools.wait_check_quit(p.iti[1])
+                tools.wait_check_quit(p.isi[1])
 
             block += 1
 
