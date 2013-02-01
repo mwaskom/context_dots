@@ -62,6 +62,9 @@ def behav(p):
         e_p = p.early_cue_prob
         c_p = 1 - e_p
 
+        # Get info about the different cues
+        f_p = 1. / p.frame_per_context
+
         # Now generate the unordered lists in a way that
         # balances the relationships we care about
         for e_i, e_f in enumerate([c_p, e_p]):

@@ -245,12 +245,18 @@ def flip(p=0.5):
 
 def load_design_csv(params):
 
-    state = RandomState(abs(hash(params.subject)))
+    state = subject_specific_state(params.subject)
     choices = list(letters[:params.n_designs])
     params.sched_id = state.permutation(choices)[params.run - 1]
     design_file = params.design_template % params.sched_id
     design = pd.read_csv(design_file, index_col="trial")
     return design
+
+
+def subject_specific_state(subject):
+
+    state = RandomState(abs(hash(subject)))
+    return state
 
 
 class WindowInfo(object):

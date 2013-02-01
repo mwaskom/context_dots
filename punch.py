@@ -392,8 +392,9 @@ class Frame(object):
         length = self.field_size + self.frame_width
         width = self.frame_width
         size_dict = dict(long=[(width, length)], short=[(length, width)])
-        size_dict["plaid"] = size_dict["long"] + size_dict["short"]
-        ori_dict = dict(long=[90], short=[0], plaid=[90, 0])
+        size_dict["plaid"] = size_dict["short"] + size_dict["long"]
+        ori_dict = dict(long=[90], short=[0],)
+        ori_dict["plaid"] = ori_dict["short"] + ori_dict["long"]
         opacity = 0.5 if pattern == "plaid" else 1
 
         elems = []
@@ -418,9 +419,9 @@ class Frame(object):
         length = self.field_size + self.frame_width
         width = self.frame_width
         size_dict = dict(long=[(width, length)], short=[(length, width)])
-        size_dict["plaid"] = size_dict["long"] + size_dict["short"]
+        size_dict["plaid"] = size_dict["short"] + size_dict["long"]
         ori_dict = dict(short=[90], long=[0])
-        ori_dict["plaid"] = ori_dict["long"] + ori_dict["short"]
+        ori_dict["plaid"] = ori_dict["short"] + ori_dict["long"]
         opacity = 0.5 if pattern == "plaid" else 1
 
         elems = []
