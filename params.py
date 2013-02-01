@@ -21,8 +21,8 @@ punch_base = dict(
     frame_tex="sin",
     frame_per_context=2,
     frame_contrasts=[.65, .65, 1, 1],
-    frame_sfs=[2, 4.5, 2.5, 8],
-    frame_phases=[.5, 0, 0, .5],
+    frame_sfs=[2, 4.5, 2.5, 6],
+    frame_phases=[.5, 0, 0, 0],
     frame_patterns=["short", "long", "plaid", "plaid"],
 
     # Dots
