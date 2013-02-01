@@ -458,19 +458,6 @@ class Frame(object):
                 elems.append(obj)
         return elems
 
-    def set_context(self, context):
-
-        w = self.frame_width
-        sizes = [(self.field_size + w, w),
-                 (w, self.field_size + w)]
-        for i in range(2):
-            self.lr[i].setOri([0, 90][context])
-            self.tb[i].setOri([90, 0][context])
-            for sides in ["lr", "tb"]:
-                obj = getattr(self, sides)
-                obj[i].setSize(sizes[context])
-                obj[i].setSF(self.sf_list[context])
-
     def make_active(self, id):
 
         self.active_index = letters.index(id)
