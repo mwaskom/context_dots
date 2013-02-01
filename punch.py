@@ -246,39 +246,44 @@ def train(p, win, stims):
 
 def demo(p, win, stims):
 
-    frame = stims["frame"]
-    stims["dots"].new_signals(*[p.motion_coh_target] * 2)
+    with tools.PresentationLoop(win):
+        frame = stims["frame"]
+        stims["dots"].new_signals(*[p.motion_coh_target] * 2)
 
-    stim_event = EventEngine(win, stims, p)
-    frame.set_context(0)
+        stim_event = EventEngine(win, stims, p)
+        frame.make_active("A")
 
-    tools.wait_and_listen("space")
+        tools.wait_and_listen("space")
 
-    stim_event(0, 0, 0, 0)
-    win.flip()
-    tools.wait_and_listen("space")
-
-    stim_event(0, 0, 0, 0)
-    win.flip()
-    tools.wait_and_listen("space")
-
-    for context in [0, 1]:
-        frame.set_context(context)
-        frame.draw()
+        stim_event(0, 0, 0, 0)
         win.flip()
         tools.wait_and_listen("space")
 
-    for context in [0, 1]:
-        frame.set_context(context)
-        frame.draw()
+        stim_event(0, 0, 0, 0)
         win.flip()
         tools.wait_and_listen("space")
-        for refresh in xrange(p.fb_dur * 60):
-            if not refresh % p.fb_freq:
-                frame.flip_phase()
-            frame.draw()
-            win.flip()
-        tools.wait_and_listen("space")
+
+        for context in [0, 1]:
+            for cue in range(2):
+                id = [["A", "B"], ["C", "D"]][context][cue]
+                frame.make_active(id)
+                frame.draw()
+                win.flip()
+                tools.wait_and_listen("space")
+
+        for context in [0, 1]:
+            for cue in range(2):
+                id = [["A", "B"], ["C", "D"]][context][cue]
+                frame.make_active(id)
+                frame.draw()
+                win.flip()
+                tools.wait_and_listen("space")
+                for refresh in xrange(p.fb_dur * 60):
+                    if not refresh % p.fb_freq:
+                        frame.flip_phase()
+                    frame.draw()
+                    win.flip()
+                tools.wait_and_listen("space")
 
 
 class EventEngine(object):
