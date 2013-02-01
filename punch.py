@@ -97,7 +97,7 @@ def behav(p, win, stims):
             target = [motion, color][context]
 
             # Pre-stim fixation
-            isi = uniform(*p.iti)
+            isi = uniform(*p.isi)
             t_info["isi"] = isi
             stims["fix"].draw()
             win.flip()

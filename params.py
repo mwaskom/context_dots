@@ -44,9 +44,16 @@ punch_base = dict(
 
     # Timing
     stim_dur=2,     # seconds
-    iti=(.5, 2.5),  # uniform params (s)
 
     # Communication
+    instruct_size=0.5,
+    instruct_text="""
+    Use the < and > keys to respond
+      while dots are on the screen
+
+          Press space to begin
+          """,
+
     break_text_size=0.5,
     break_text="""
             Take a quick break, if you'd like!
@@ -77,22 +84,7 @@ punch_behav = dict(
 
     log_base="data/%(subject)s_behav_run%(run)d",
 
-    instruct_size=0.5,
-    instruct_text="""
-        Look at
-        all the pretty dots""",
-
-    break_text_size=0.5,
-    break_text="""
-        Take a quick break, if you'd like!
-        Press space to start the next block
-            """,
-    finish_text="""
-                Run Finished!
-
-        Please tell the experimenter!
-        """,
-
+    isi=(.5, 2.5),  # uniform params (s)
     trials_bw_breaks=20,
 
 )
@@ -113,17 +105,11 @@ punch_train = dict(
     color_coh_step=.05,
     color_coh_reversals=3,
     blocks_bw_break=4,
+    isi=(.5, 2.5),  # uniform params (s)
 
     # Feedback
     fb_freq=10,
     fb_dur=1,
-
-    # Instructions
-    instruct_size=0.5,
-    instruct_text="""
-        Look at the dots and learn some shit
-        """,
-
 
 )
 punch_train.update(punch_base)
