@@ -18,6 +18,11 @@ def main(arglist):
     p = tools.Params("punch_%s" % mode)
     p.set_by_cmdline(arglist)
 
+    # Assign the frame identities randomly over subjects
+    state = tools.subject_specific_state(p.subject)
+    frame_ids = state.permutation(list(letters[:2 * p.frame_per_context]))
+    p.frame_ids = frame_ids.reshape(2, -1).tolist()
+
     # Open up the stimulus window
     win = tools.launch_window(p)
 
@@ -74,8 +79,8 @@ def behav(p, win, stims):
 
     # Set up the log files
     d_cols = list(d.columns)
-    log_cols = d_cols + ["cue_dur", "response", "rt", "correct",
-                         "isi", "onset_time", "dropped_frames"]
+    log_cols = d_cols + ["frame_id", "cue_dur", "response", "rt",
+                         "correct", "isi", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
     # Execute the experiment
@@ -87,7 +92,10 @@ def behav(p, win, stims):
             t_info = {k: d[k][t] for k in d_cols}
 
             context = d.context[t]
-            stims["frame"].set_context(context)
+            cue = d.cue[t]
+            frame_id = p.frame_ids[context][cue]
+            stims["frame"].make_active(frame_id)
+            t_info["frame_id"] = frame_id
 
             early = bool(d.early[t])
             cue_dur = uniform(*p.cue_dur) if early else None
@@ -102,7 +110,7 @@ def behav(p, win, stims):
             t_info["isi"] = isi
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(uniform(*p.isi))
+            tools.wait_check_quit(isi)
 
             # The stimulus event actually happens here
             res = stim_event(context, motion, color,
@@ -129,7 +137,8 @@ def train(p, win, stims):
     stims["instruct"].draw()
 
     # Set up the log object
-    log_cols = ["block", "learned", "settled", "context",
+    log_cols = ["block", "learned", "settled",
+                "context", "cue", "frame_id",
                 "motion", "color", "motion_coh", "color_coh",
                 "correct", "rt", "response", "onset_time",
                 "dropped_frames"]
@@ -148,6 +157,7 @@ def train(p, win, stims):
     color_reversals = 0
 
     block = 0
+    cue = 0
     with tools.PresentationLoop(win, log, train_summary):
         stim_event.clock.reset()
         while not trained:
@@ -156,10 +166,14 @@ def train(p, win, stims):
             block_acc = []
 
             context = block % 2
-            stims["frame"].set_context(context)
+            if not context:
+                cue = (cue + 1) % p.frame_per_context
+            frame_id = p.frame_ids[context][cue]
+            stims["frame"].make_active(frame_id)
             stims["dots"].new_signals(*coherences)
 
             block_info = dict(block=block, context=context,
+                              cue=cue, frame_id=frame_id,
                               learned=learned, settled=settled,
                               motion_coh=coherences[0],
                               color_coh=coherences[1])
@@ -452,7 +466,7 @@ class Frame(object):
                 obj[i].setSize(sizes[context])
                 obj[i].setSF(self.sf_list[context])
 
-    def set_active(self, id):
+    def make_active(self, id):
 
         self.active_index = letters.index(id)
         self.active_frame = self.frames[id]
@@ -582,6 +596,8 @@ class Dots(object):
 def behav_summary(log):
     """Gets executed at the end of a behavioral run."""
     run_df = pd.read_csv(log.fname)
+    if not len(run_df):
+        return
     print "Overall Accuracy: %.2f" % run_df.correct.mean()
     print run_df.groupby("context").correct.mean()
     print "Average RT: %.2f" % run_df.correct.mean()
@@ -591,6 +607,8 @@ def behav_summary(log):
 def train_summary(log):
     """Gets executed at the end of training."""
     df = pd.read_csv(log.fname)
+    if not len(df):
+        return
     print "Training took %d blocks" % df.block.unique().size
 
 if __name__ == "__main__":
