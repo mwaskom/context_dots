@@ -1,6 +1,7 @@
 from __future__ import division
 import sys
 import colorsys
+from string import letters
 from textwrap import dedent
 import pandas as pd
 import numpy as np
@@ -30,7 +31,7 @@ def main(arglist):
                               advance_keys=p.wait_keys,
                               quit_keys=p.quit_keys)
 
-    stims = dict(frame=Frame(win, p),
+    stims = dict(frame=Frame(win, p, fix),
                  dots=Dots(win, p),
                  fix=fix,
                  instruct=instruct,
@@ -163,7 +164,6 @@ def train(p, win, stims):
                               motion_coh=coherences[0],
                               color_coh=coherences[1])
 
-            stims["fix"].draw()
             stims["frame"].draw()
             win.flip()
             tools.wait_check_quit(p.iti[1])
@@ -184,7 +184,6 @@ def train(p, win, stims):
                 block_rts.append(res["rt"])
                 block_acc.append(res["correct"])
 
-                stims["fix"].draw()
                 stims["frame"].draw()
                 win.flip()
                 tools.wait_check_quit(uniform(*p.iti))
@@ -234,7 +233,6 @@ def train(p, win, stims):
 def demo(p, win, stims):
 
     frame = stims["frame"]
-    fix = stims["fix"]
     stims["dots"].new_signals(*[p.motion_coh_target] * 2)
 
     stim_event = EventEngine(win, stims, p)
@@ -253,21 +251,18 @@ def demo(p, win, stims):
     for context in [0, 1]:
         frame.set_context(context)
         frame.draw()
-        fix.draw()
         win.flip()
         tools.wait_and_listen("space")
 
     for context in [0, 1]:
         frame.set_context(context)
         frame.draw()
-        fix.draw()
         win.flip()
         tools.wait_and_listen("space")
         for refresh in xrange(p.fb_dur * 60):
             if not refresh % p.fb_freq:
                 frame.flip_phase()
             frame.draw()
-            fix.draw()
             win.flip()
         tools.wait_and_listen("space")
 
@@ -317,7 +312,6 @@ class EventEngine(object):
         # Early Cue Presentation
         if early:
             self.frame.draw()
-            self.fix.draw()
             self.win.flip()
             tools.wait_check_quit(cue_dur)
 
@@ -325,7 +319,6 @@ class EventEngine(object):
         dropped_before = self.win.nDroppedFrames
         event.clearEvents()
         for frame in xrange(self.p.stim_dur * 60):
-            self.fix.draw()
             self.dots.draw()
             self.frame.draw()
             if self.debug:
@@ -359,7 +352,6 @@ class EventEngine(object):
                 if not frame % self.fb_freq:
                     self.frame.flip_phase()
                 self.frame.draw()
-                self.fix.draw()
                 self.win.flip()
 
             self.frame.reset_phase()
@@ -372,25 +364,79 @@ class EventEngine(object):
 
 class Frame(object):
 
-    def __init__(self, win, p):
+    def __init__(self, win, p, fix=None):
 
-        self.lr = []
-        self.tb = []
+        self.win = win
         self.field_size = p.field_size
         self.frame_width = p.frame_width
-        self.sf_list = p.frame_sfs
-        self.base_phase = 0 if p.window_color in ["black", -1] else 0.5
+        self.texture = p.frame_tex
+        self.contrasts = p.frame_contrasts
+        self.sfs = p.frame_sfs
+        self.phases = p.frame_phases
+        self.patterns = p.frame_patterns
+        self.fix = fix
 
-        for pos in [-.5, .5]:
-            self.lr.append(visual.GratingStim(win, tex=p.frame_tex,
-                                              contrast=p.frame_contrast,
-                                              phase=self.base_phase,
-                                              pos=(0, pos * p.field_size)))
+        frames = []
+        for i in range(2 * p.frame_per_context):
+            args = [self.patterns[i], self.contrasts[i],
+                    self.sfs[i], self.phases[i]]
+            walls = self._make_walls(*args)
+            floors = self._make_floors(*args)
+            frames.append(walls + floors)
+        self.frames = dict(zip(letters[:2 * p.frame_per_context], frames))
 
-            self.tb.append(visual.GratingStim(win, tex=p.frame_tex,
-                                              contrast=p.frame_contrast,
-                                              phase=self.base_phase,
-                                              pos=(pos * p.field_size, 0)))
+    def _make_floors(self, pattern, contrast, sf, phase):
+
+        ypos = self.field_size / 2
+        positions = [(0, -ypos), (0, ypos)]
+        length = self.field_size + self.frame_width
+        width = self.frame_width
+        size_dict = dict(long=[(width, length)], short=[(length, width)])
+        size_dict["plaid"] = size_dict["long"] + size_dict["short"]
+        ori_dict = dict(long=[90], short=[0], plaid=[90, 0])
+        opacity = 0.5 if pattern == "plaid" else 1
+
+        elems = []
+        for pos in positions:
+            for size, ori in zip(size_dict[pattern], ori_dict[pattern]):
+                obj = visual.GratingStim(self.win,
+                                         tex=self.texture,
+                                         pos=pos,
+                                         size=size,
+                                         sf=sf,
+                                         ori=ori,
+                                         phase=phase,
+                                         contrast=contrast,
+                                         opacity=opacity)
+                elems.append(obj)
+        return elems
+
+    def _make_walls(self, pattern, contrast, sf, phase):
+
+        xpos = self.field_size / 2
+        positions = [(-xpos, 0), (xpos, 0)]
+        length = self.field_size + self.frame_width
+        width = self.frame_width
+        size_dict = dict(long=[(width, length)], short=[(length, width)])
+        size_dict["plaid"] = size_dict["long"] + size_dict["short"]
+        ori_dict = dict(short=[90], long=[0])
+        ori_dict["plaid"] = ori_dict["long"] + ori_dict["short"]
+        opacity = 0.5 if pattern == "plaid" else 1
+
+        elems = []
+        for pos in positions:
+            for size, ori in zip(size_dict[pattern], ori_dict[pattern]):
+                obj = visual.GratingStim(self.win,
+                                         tex=self.texture,
+                                         pos=pos,
+                                         size=size,
+                                         sf=sf,
+                                         ori=ori,
+                                         phase=phase,
+                                         contrast=contrast,
+                                         opacity=opacity)
+                elems.append(obj)
+        return elems
 
     def set_context(self, context):
 
@@ -405,23 +451,27 @@ class Frame(object):
                 obj[i].setSize(sizes[context])
                 obj[i].setSF(self.sf_list[context])
 
+    def set_active(self, id):
+
+        self.active_index = letters.index(id)
+        self.active_frame = self.frames[id]
+
     def flip_phase(self):
 
-        for stims in [self.tb, self.lr]:
-            for i in range(2):
-                stims[i].setPhase((stims[i].phase + .5) % 1)
+        for elem in self.active_frame:
+            elem.setPhase((elem.phase + .5) % 1)
 
     def reset_phase(self):
 
-        for stims in [self.tb, self.lr]:
-            for i in range(2):
-                stims[i].setPhase(self.base_phase)
+        for elem in self.active_frame:
+            elem.setPhase(self.phases[self.active_index])
 
     def draw(self):
 
-        for stims in [self.tb, self.lr]:
-            for i in range(2):
-                stims[i].draw()
+        for elem in self.active_frame:
+            elem.draw()
+        if self.fix is not None:
+            self.fix.draw()
 
 
 class Dots(object):
