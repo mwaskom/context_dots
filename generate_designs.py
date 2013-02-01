@@ -52,6 +52,7 @@ def behav(p):
         motion = []
         color = []
         early = []
+        cue = []
 
         # Make things arrays so fancy indexing will work
         context_freqs = np.array([m_freq, c_freq])
@@ -63,29 +64,36 @@ def behav(p):
         c_p = 1 - e_p
 
         # Get info about the different cues
-        f_p = 1. / p.frame_per_context
+        f_f = 1. / p.frame_per_context
 
         # Now generate the unordered lists in a way that
         # balances the relationships we care about
         for e_i, e_f in enumerate([c_p, e_p]):
             early += [e_i] * int((e_f * p.trials_per_run))
 
-            # Balance context with respect to cue type
-            for c_i, c_f in enumerate(context_freqs):
-                context += [c_i] * (e_f * c_f * p.trials_per_run)
+            # Balance cue identity within cue timing
+            for f_i in range(p.frame_per_context):
+                cue += [f_i] * int((e_f * f_f * p.trials_per_run))
 
-                # Now balance each coherent feature with
-                # respect to cue type and target context
-                for m_i, m_f in enumerate(motion_freqs):
-                    motion += [m_i] * (e_f * c_f * m_f * p.trials_per_run)
-                for h_i, h_f in enumerate(color_freqs):
-                    color += [h_i] * (e_f * c_f * h_f * p.trials_per_run)
+                # Balance context with respect to cue type
+                for c_i, c_f in enumerate(context_freqs):
+                    context += [c_i] * (e_f * f_f * c_f * p.trials_per_run)
+
+                    # Now balance each coherent feature with
+                    # respect to cue type and target context
+                    for m_i, m_f in enumerate(motion_freqs):
+                        motion += [m_i] * (e_f * f_f * c_f *
+                                           m_f * p.trials_per_run)
+                    for h_i, h_f in enumerate(color_freqs):
+                        color += [h_i] * (e_f * f_f * c_f *
+                                          h_f * p.trials_per_run)
 
         # Make things arrays
         early = np.array(early)
         context = np.array(context)
         motion = np.array(motion)
         color = np.array(color)
+        cue = np.array(cue)
 
         # Now we're going to shuffle the order of events,
         # again respecting the balance of things we care about
@@ -99,6 +107,7 @@ def behav(p):
                 shuffle_those = shuffle_these & (context == this_context)
                 motion[shuffle_those] = permutation(motion[shuffle_those])
                 color[shuffle_those] = permutation(color[shuffle_those])
+                cue[shuffle_those] = permutation(cue[shuffle_those])
 
         # Finally shuffle all of the rows
         shuffler = np.random.permutation(p.trials_per_run)
@@ -122,12 +131,13 @@ def behav(p):
         # Set up the full design as a DataFrame
         run_design = pd.DataFrame(dict(context=context,
                                        early=early,
+                                       cue=cue,
                                        motion=motion,
                                        color=color,
                                        context_freq=context_freq,
                                        motion_freq=motion_freq,
                                        color_freq=color_freq),
-                                  columns=["context", "early",
+                                  columns=["context", "early", "cue",
                                            "motion", "color",
                                            "context_freq",
                                            "motion_freq", "color_freq"])
