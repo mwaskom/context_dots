@@ -97,17 +97,21 @@ def behav(p):
 
         # Now we're going to shuffle the order of events,
         # again respecting the balance of things we care about
-        for is_early in range(2):
-            # First shuffle context within each cue type
-            shuffle_these = (early == is_early).astype(bool)
+        # First shuffle context within each cue time and type
+        combos = product(range(2), range(2), range(p.frame_per_context))
+        for which_context, is_early, which_cue in combos:
+            shuffle_these = ((context == which_context) &
+                             (early == is_early) &
+                             (cue == which_cue)).astype(bool)
+            """
             shuffler = np.random.permutation(shuffle_these.sum())
             context[shuffle_these] = context[shuffle_these][shuffler]
             for this_context in range(2):
                 # Now shuffle the features within each context and cue type
                 shuffle_those = shuffle_these & (context == this_context)
-                motion[shuffle_those] = permutation(motion[shuffle_those])
-                color[shuffle_those] = permutation(color[shuffle_those])
-                cue[shuffle_those] = permutation(cue[shuffle_those])
+            """
+            motion[shuffle_these] = permutation(motion[shuffle_these])
+            color[shuffle_these] = permutation(color[shuffle_these])
 
         # Finally shuffle all of the rows
         shuffler = np.random.permutation(p.trials_per_run)
@@ -115,6 +119,7 @@ def behav(p):
         context = context[shuffler]
         motion = motion[shuffler]
         color = color[shuffler]
+        cue = cue[shuffler]
 
         # Check some constraints; let's add more of these
         assert context.sum() / p.trials_per_run == context_freqs[1]
