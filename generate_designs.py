@@ -94,47 +94,6 @@ def behav(p):
         color = np.array(color, int)
         cue = np.array(cue, int)
 
-        """
-        # Now we're going to shuffle the order of events,
-        # again respecting the balance of things we care about
-        # First shuffle context within each cue time and type
-        combos = product(range(2), range(2), range(p.frame_per_context))
-        for which_context, is_early, which_cue in combos:
-            shuffle_these = ((context == which_context) &
-                             (early == is_early) &
-                             (cue == which_cue)).astype(bool)
-            shuffler = np.random.permutation(shuffle_these.sum())
-            context[shuffle_these] = context[shuffle_these][shuffler]
-            for this_context in range(2):
-                # Now shuffle the features within each context and cue type
-                shuffle_those = shuffle_these & (context == this_context)
-            good = False
-            best_congru = 1
-            for i in xrange(100000):
-                c_i = permutation(color[shuffle_these])
-                congru_i = np.mean(m_i == c_i)
-                if congru_i == 0.5:
-                    motion[shuffle_these] = m_i
-                    color[shuffle_these] = c_i
-                    good = True
-                    break
-                else:
-                if congru_i < best_congru:
-                    best_congru = congru_i
-
-            if not good:
-                print best_congru
-                raise Exception
-
-        # Finally shuffle all of the rows
-        shuffler = RandomState(p.shuffle_seed).permutation(p.trials_per_run)
-        early = early[shuffler]
-        context = context[shuffler]
-        motion = motion[shuffler]
-        color = color[shuffler]
-        cue = cue[shuffler]
-        """
-
         # Check some constraints; let's add more of these
         assert context.sum() / p.trials_per_run == context_freqs[1]
         assert motion.sum() / p.trials_per_run == motion_freqs[1]
@@ -174,6 +133,10 @@ def behav(p):
         butt1_freq = target.mean()
         response_freq = np.where(target, 1 - butt1_freq, butt1_freq)
         run_design["response_freq"] = response_freq
+        correct_response = np.zeros(p.trials_per_run)
+        correct_response[context == 0] = motion[context == 0]
+        correct_response[context == 1] = color[context == 1]
+        run_design["correct_response"] = correct_response
 
         # Add in a column about congruency for later analysis
         run_design["congruent"] = run_design["motion"] == run_design["color"]
