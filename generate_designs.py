@@ -1,3 +1,4 @@
+"""Create design csv files for various modes of the punch experiment."""
 from __future__ import division
 import sys
 from string import letters
