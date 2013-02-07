@@ -3,7 +3,6 @@ import sys
 from string import letters
 import pandas as pd
 import numpy as np
-from numpy.random import permutation
 from itertools import permutations, product
 import tools
 
@@ -77,24 +76,25 @@ def behav(p):
 
                 # Balance context with respect to cue type
                 for c_i, c_f in enumerate(context_freqs):
-                    context += [c_i] * (e_f * f_f * c_f * p.trials_per_run)
+                    nt = e_f * f_f * c_f * p.trials_per_run
+                    context += [c_i] * nt
 
-                    # Now balance each coherent feature with
-                    # respect to cue type and target context
                     for m_i, m_f in enumerate(motion_freqs):
-                        motion += [m_i] * (e_f * f_f * c_f *
-                                           m_f * p.trials_per_run)
+                        motion += [m_i] * (nt * m_f)
+
+                    color_temp = []
                     for h_i, h_f in enumerate(color_freqs):
-                        color += [h_i] * (e_f * f_f * c_f *
-                                          h_f * p.trials_per_run)
+                        color_temp += [h_i] * (nt * h_f)
+                    color += reversed(color_temp)
 
         # Make things arrays
-        early = np.array(early)
-        context = np.array(context)
-        motion = np.array(motion)
-        color = np.array(color)
-        cue = np.array(cue)
+        early = np.array(early, int)
+        context = np.array(context, int)
+        motion = np.array(motion, int)
+        color = np.array(color, int)
+        cue = np.array(cue, int)
 
+        """
         # Now we're going to shuffle the order of events,
         # again respecting the balance of things we care about
         # First shuffle context within each cue time and type
@@ -103,23 +103,37 @@ def behav(p):
             shuffle_these = ((context == which_context) &
                              (early == is_early) &
                              (cue == which_cue)).astype(bool)
-            """
             shuffler = np.random.permutation(shuffle_these.sum())
             context[shuffle_these] = context[shuffle_these][shuffler]
             for this_context in range(2):
                 # Now shuffle the features within each context and cue type
                 shuffle_those = shuffle_these & (context == this_context)
-            """
-            motion[shuffle_these] = permutation(motion[shuffle_these])
-            color[shuffle_these] = permutation(color[shuffle_these])
+            good = False
+            best_congru = 1
+            for i in xrange(100000):
+                c_i = permutation(color[shuffle_these])
+                congru_i = np.mean(m_i == c_i)
+                if congru_i == 0.5:
+                    motion[shuffle_these] = m_i
+                    color[shuffle_these] = c_i
+                    good = True
+                    break
+                else:
+                if congru_i < best_congru:
+                    best_congru = congru_i
+
+            if not good:
+                print best_congru
+                raise Exception
 
         # Finally shuffle all of the rows
-        shuffler = np.random.permutation(p.trials_per_run)
+        shuffler = RandomState(p.shuffle_seed).permutation(p.trials_per_run)
         early = early[shuffler]
         context = context[shuffler]
         motion = motion[shuffler]
         color = color[shuffler]
         cue = cue[shuffler]
+        """
 
         # Check some constraints; let's add more of these
         assert context.sum() / p.trials_per_run == context_freqs[1]
@@ -147,9 +161,8 @@ def behav(p):
                                            "context_freq",
                                            "motion_freq", "color_freq"])
 
-        # Add in the target frequency, which is the
-        # joint probability across context and coherent feature
-        # and also the response frequency
+        # Add in additional info that is dependent on
+        # the schedule we just built
         target_freq = np.zeros(p.trials_per_run)
         target = np.zeros(len(run_design))
         for c_i, c_name in enumerate(["motion", "color"]):
