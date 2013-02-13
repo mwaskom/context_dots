@@ -32,11 +32,9 @@ punch_base = dict(
     dot_size=.1,  # in degrees
     dot_life_mean=60,  # in frames
     dot_life_std=20,  # in frames
-    dot_mot_coh=.3,  # pct dots moving coherently
-    dot_col_coh=.3,  # pct dots in target color
     dot_dirs=[90, 270],
     dot_colors=["yellow", "cyan"],
-    dot_hues=[1. / 6, .5],  # hue coordinates in hsv space
+    dot_hues=[.1667, .5],  # hue coordinates in hsv space
     dot_sat=1,
     dot_val=1,
 
@@ -44,6 +42,9 @@ punch_base = dict(
     quit_keys=["esc", "q"],
     resp_keys=["comma", "period"],
     wait_keys=["space"],
+
+    # Where coherence info is saved after training
+    coh_file_template="data/%s_coherence",
 
     # Timing
     stim_dur=2,     # seconds
@@ -100,13 +101,13 @@ punch_train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=8,
+    n_per_block=4,
     full_coh_thresh=1,
     at_thresh_blocks=2,
     settle_slope=.1,
-    motion_coh_target=.3,
-    color_coh_step=.05,
-    color_coh_reversals=3,
+    settle_thresh=.75,
+    motion_coh_target=.25,
+    reversal_steps=[.05, .025, .01],
     blocks_bw_break=4,
     isi=(.5, 2.5),  # uniform params (s)
 

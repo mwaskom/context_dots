@@ -1,6 +1,7 @@
 from __future__ import division
 import sys
 import colorsys
+import json
 from string import letters
 from textwrap import dedent
 import pandas as pd
@@ -77,6 +78,12 @@ def behav(p, win, stims):
     # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p)
 
+    # Determine the coherence for this subject
+    coh_file = p.coh_file_template % p.subject
+    with open(coh_file) as fid:
+        coherences = json.load(fid)
+    p.update(coherences)
+
     # Set up the log files
     d_cols = list(d.columns)
     log_cols = d_cols + ["frame_id", "cue_dur", "response", "rt",
@@ -152,9 +159,10 @@ def train(p, win, stims):
     trained = False
     coherences = [1, 1]
     context_good = [0, 0]
-    motion_rts = []
+    settle_accs = [0, 0]
+    motion_med = []
     color_adj = -1
-    color_reversals = 0
+    col_reversals = 0
 
     block = 0
     cue = 0
@@ -215,22 +223,24 @@ def train(p, win, stims):
             if learned:
                 if settled:
                     if context:
-                        motion_mean = stats.nanmean(motion_rts)
-                        block_med = stats.nanmedian(block_rts)
+                        color_med = stats.nanmedian(block_rts)
                         if color_adj == -1:
-                            reverse = block_med > motion_mean
+                            reverse = color_med > motion_med
                         else:
-                            reverse = block_med < motion_mean
+                            reverse = color_med < motion_med
                         if reverse:
                             color_adj *= -1
-                            color_reversals += 1
-                        coherences[1] += color_adj * p.color_coh_step
-                        if color_reversals > p.color_coh_reversals:
+                            col_reversals += 1
+                        try:
+                            step = color_adj * p.reversal_steps[col_reversals]
+                            coherences[1] += step
+                        except IndexError:
                             trained = True
                     else:
-                        motion_rts.append(stats.nanmedian(block_rts))
+                        motion_med = stats.nanmedian(block_rts)
                 else:
-                    if context:
+                    settle_accs[context] = np.mean(block_acc)
+                    if context and min(settle_accs) > p.settle_thresh:
                         coherences = [c - p.settle_slope for c in coherences]
                         if abs(coherences[0] - p.motion_coh_target) < 1e-6:
                             settled = True
@@ -241,6 +251,9 @@ def train(p, win, stims):
                     learned = True
 
         stims["finish"].draw()
+        coherences = zip(["dot_mot_coh", "dot_col_coh"], coherences)
+        with open(p.coh_file_template % p.subject, "w") as fid:
+            json.dump(coherences, fid)
         print "Final color coherence: %.2f" % coherences[1]
 
 
@@ -508,8 +521,6 @@ class Dots(object):
                                             colors=np.ones((p.dot_count, 3)),
                                             elementTex=None,
                                             )
-
-        self.new_signals(p.dot_mot_coh, p.dot_col_coh)
 
         self.dot_life = np.round(np.random.normal(p.dot_life_mean,
                                                   p.dot_life_std,
