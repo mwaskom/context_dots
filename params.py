@@ -44,7 +44,7 @@ punch_base = dict(
     wait_keys=["space"],
 
     # Where coherence info is saved after training
-    coh_file_template="data/%s_coherence",
+    coh_file_template="data/%s_coherence.json",
 
     # Timing
     stim_dur=2,     # seconds

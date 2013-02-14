@@ -72,6 +72,11 @@ def behav(p, win, stims):
     d = tools.load_design_csv(p)
     p.n_trials = len(d)
 
+    # Randomize for this execution
+    d["sorter"] = np.random.rand(p.n_trials)
+    d.sort("sorter", inplace=True)
+    d.index = range(p.n_trials)
+
     # Draw the instructions
     stims["instruct"].draw()
 
@@ -82,7 +87,9 @@ def behav(p, win, stims):
     coh_file = p.coh_file_template % p.subject
     with open(coh_file) as fid:
         coherences = json.load(fid)
-    p.update(coherences)
+    p.__dict__.update(coherences)
+    coh_vals = [coherences["dot_%s_coh" % c] for c in ["mot", "col"]]
+    stims["dots"].new_signals(*coh_vals)
 
     # Set up the log files
     d_cols = list(d.columns)
@@ -264,7 +271,7 @@ def demo(p, win, stims):
         stims["dots"].new_signals(*[p.motion_coh_target] * 2)
 
         stim_event = EventEngine(win, stims, p)
-        frame.make_active("A")
+        frame.make_active("a")
 
         tools.wait_and_listen("space")
 
@@ -278,7 +285,7 @@ def demo(p, win, stims):
 
         for context in [0, 1]:
             for cue in range(2):
-                id = [["A", "B"], ["C", "D"]][context][cue]
+                id = [["a", "b"], ["c", "d"]][context][cue]
                 frame.make_active(id)
                 frame.draw()
                 win.flip()
@@ -286,7 +293,7 @@ def demo(p, win, stims):
 
         for context in [0, 1]:
             for cue in range(2):
-                id = [["A", "B"], ["C", "D"]][context][cue]
+                id = [["a", "b"], ["c", "d"]][context][cue]
                 frame.make_active(id)
                 frame.draw()
                 win.flip()
