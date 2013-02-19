@@ -158,9 +158,11 @@ def train(p, win, stims):
                 "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
-    # Setup the object to control stimulus presentation
+    # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p, feedback=True)
 
+    # Set up some variables used in logic below
+    # that assess how training is going
     learned = False
     settled = False
     trained = False
@@ -171,6 +173,7 @@ def train(p, win, stims):
     color_adj = -1
     col_reversals = 0
 
+    # Main experiment loop
     block = 0
     cue = 0
     with tools.PresentationLoop(win, log, train_summary):
@@ -226,42 +229,72 @@ def train(p, win, stims):
 
             block += 1
 
-            # Update the training information
-            if learned:
-                if settled:
-                    if context:
-                        color_med = stats.nanmedian(block_rts)
-                        if color_adj == -1:
-                            reverse = color_med > motion_med
-                        else:
-                            reverse = color_med < motion_med
-                        if reverse:
-                            color_adj *= -1
-                            col_reversals += 1
-                        try:
-                            step = color_adj * p.reversal_steps[col_reversals]
-                            coherences[1] += step
-                        except IndexError:
-                            trained = True
-                    else:
-                        motion_med = stats.nanmedian(block_rts)
-                else:
-                    settle_accs[context] = np.mean(block_acc)
-                    if context and min(settle_accs) > p.settle_thresh:
-                        coherences = [c - p.settle_slope for c in coherences]
-                        if abs(coherences[0] - p.motion_coh_target) < 1e-6:
-                            settled = True
-            else:
+            # Handle the main training logic in three three stages:
+            # First we have full-coherence blocks until subjects
+            # have learned the cue-context and stimulus-response mappings
+            # Then, we gradually decrease the coherence until we hit the
+            # target for motion blocks. Finally, we staircase the color
+            # coherence around a bit to try and match RTs.
+
+            if not learned:
+                # Update the accuracy history
                 if np.mean(block_acc) >= p.full_coh_thresh:
                     context_good[context] += 1
-                if all([g >= p.at_thresh_blocks for g in context_good]):
+                # Check if we've reached the criterion for
+                # full-coherence learning
+                if min(context_good) >= p.at_thresh_blocks:
                     learned = True
+                continue
 
-        stims["finish"].draw()
+            if not settled:
+                # If this is a color block and we are above the
+                # accuracy threshold for the settle period on this and
+                # the previous motion block, decrement the coherence
+                settle_accs[context] = np.mean(block_acc)
+                if context and min(settle_accs) >= p.settle_thresh:
+                    coherences = [c - p.settle_slope for c in coherences]
+                    # Check if we've hit the target for motion coherence
+                    if abs(coherences[0] - p.motion_coh_target) < 1e-6:
+                        settled = True
+                continue
+
+            if not trained:
+                # Staircase the color coherence to try and match
+                # reaction times to the motion coherence
+                if context:
+                    color_med = stats.nanmedian(block_rts)
+                    if color_adj == -1:
+                        # When lowering color coherence, reverse
+                        # if motion is faster (easier) than color
+                        reverse = color_med > motion_med
+                    else:
+                        # The converse is the case when we are
+                        # stepping up the color coherence
+                        reverse = color_med < motion_med
+
+                    if reverse:
+                        color_adj *= -1
+                        col_reversals += 1
+
+                    try:
+                        # Index the list of step sizes by the number
+                        # of reversals we've made. If we've made the
+                        # desired number of reversals, this will
+                        # raise an IndexError and we'll catch that
+                        # exception to say we are trained
+                        step_size = p.reversal_steps[col_reversals]
+                        step = color_adj * step_size
+                        coherences[1] += step
+                    except IndexError:
+                        trained = True
+                else:
+                    motion_med = stats.nanmedian(block_rts)
+
+        print "Final color coherence: %.2f" % coherences[1]
         coherences = zip(["dot_mot_coh", "dot_col_coh"], coherences)
         with open(p.coh_file_template % p.subject, "w") as fid:
             json.dump(coherences, fid)
-        print "Final color coherence: %.2f" % coherences[1]
+        stims["finish"].draw()
 
 
 def demo(p, win, stims):

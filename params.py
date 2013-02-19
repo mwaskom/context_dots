@@ -101,12 +101,12 @@ punch_train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=4,
+    n_per_block=5,
     full_coh_thresh=1,
     at_thresh_blocks=2,
     settle_slope=.1,
-    settle_thresh=.75,
-    motion_coh_target=.25,
+    settle_thresh=.8,
+    motion_coh_target=.3,
     reversal_steps=[.05, .025, .01],
     blocks_bw_break=4,
     isi=(.5, 2.5),  # uniform params (s)
