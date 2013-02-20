@@ -557,7 +557,7 @@ class Dots(object):
         self.dot_sat = p.dot_sat
         self.dot_val = p.dot_val
         self.dirs = p.dot_dirs
-        self.field_size = p.field_size
+        self.field_size = p.field_size - p.frame_width
         self.ndots = p.dot_count
         self.dot_life_mean = p.dot_life_mean
         self.dot_life_std = p.dot_life_std
@@ -634,7 +634,7 @@ class Dots(object):
         xys = self.dots.xys
         xys[:, 0] += self.speed * np.cos(self._directions)
         xys[:, 1] += self.speed * np.sin(self._directions)
-        bound = self.field_size / 2
+        bound = (self.field_size / 2)
         self.dots.setXYs(xys)
         out_of_bounds = np.any(np.abs(xys) > bound, axis=1)
         self.new_positions(out_of_bounds)
