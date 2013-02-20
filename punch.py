@@ -195,7 +195,7 @@ def train(p, win, stims):
     # Main experiment loop
     block = 0
     cue = 0
-    with tools.PresentationLoop(win, log, train_summary):
+    with tools.PresentationLoop(win, log, train_exit):
         stim_event.clock.reset()
         while not trained:
 
@@ -658,10 +658,11 @@ class Dots(object):
 
 def behav_exit(log):
     """Gets executed at the end of a behavioral run."""
-    start, finish = log.fname.split("run")
-    dots_fname = start + "dots_run" + finish.strip(".csv")
+    # Save the dot stimulus data to a npz archive
+    dots_fname = log.fname.strip(".csv")
     np.savez(dots_fname, **log.dots)
 
+    # Read in the data file and print some performance information
     run_df = pd.read_csv(log.fname)
     if not len(run_df):
         return
@@ -671,7 +672,7 @@ def behav_exit(log):
     print run_df.groupby("context").rt.mean()
 
 
-def train_summary(log):
+def train_exit(log):
     """Gets executed at the end of training."""
     df = pd.read_csv(log.fname)
     if not len(df):
