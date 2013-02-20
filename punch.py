@@ -98,9 +98,13 @@ def behav(p, win, stims):
                          "color_switch", "motion_switch",
                          "correct", "isi", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
+    log.dots = dict(mot_signal=stims["dots"].mot_signal,
+                    col_signal=stims["dots"].col_signal,
+                    dirs=np.zeros((p.n_trials, p.dot_count)),
+                    hues=np.zeros((p.n_trials, p.dot_count)))
 
     # Execute the experiment
-    with tools.PresentationLoop(win, log, behav_summary):
+    with tools.PresentationLoop(win, log, behav_exit):
         stim_event.clock.reset()
         for t in xrange(p.n_trials):
 
@@ -144,6 +148,8 @@ def behav(p, win, stims):
                              target, early, cue_dur)
             t_info.update(res)
             log.add_data(t_info)
+            log.dots["dirs"][t] = stims["dots"].dirs
+            log.dots["hues"][t] = stims["dots"].hues
 
             # Every n trials, let the subject take a quick break
             if t and not t % p.trials_bw_breaks:
@@ -556,7 +562,7 @@ class Dots(object):
         self.dot_hues = p.dot_hues
         self.dot_sat = p.dot_sat
         self.dot_val = p.dot_val
-        self.dirs = p.dot_dirs
+        self.dot_dirs = p.dot_dirs
         self.field_size = p.field_size - p.frame_width
         self.ndots = p.dot_count
         self.dot_life_mean = p.dot_life_mean
@@ -600,6 +606,7 @@ class Dots(object):
         hues = np.random.uniform(size=self.ndots)
         t_hue = self.dot_hues[target_color]
         hues[self.col_signal] = t_hue
+        self.hues = hues
         s = self.dot_sat
         v = self.dot_val
         colors = np.array([colorsys.hsv_to_rgb(h, s, v) for h in hues])
@@ -609,8 +616,8 @@ class Dots(object):
     def new_directions(self, target_dir):
 
         dirs = np.random.uniform(size=self.ndots) * 2 * np.pi
-        dirs[self.mot_signal] = np.deg2rad(self.dirs[target_dir])
-        self._directions = dirs
+        dirs[self.mot_signal] = np.deg2rad(self.dot_dirs[target_dir])
+        self.dirs = dirs
 
     def new_positions(self, mask=None):
 
@@ -632,8 +639,8 @@ class Dots(object):
     def draw(self):
 
         xys = self.dots.xys
-        xys[:, 0] += self.speed * np.cos(self._directions)
-        xys[:, 1] += self.speed * np.sin(self._directions)
+        xys[:, 0] += self.speed * np.cos(self.dirs)
+        xys[:, 1] += self.speed * np.sin(self.dirs)
         bound = (self.field_size / 2)
         self.dots.setXYs(xys)
         out_of_bounds = np.any(np.abs(xys) > bound, axis=1)
@@ -649,8 +656,12 @@ class Dots(object):
         self.dots.draw()
 
 
-def behav_summary(log):
+def behav_exit(log):
     """Gets executed at the end of a behavioral run."""
+    start, finish = log.fname.split("run")
+    dots_fname = start + "dots_run" + finish.strip(".csv")
+    np.savez(dots_fname, **log.dots)
+
     run_df = pd.read_csv(log.fname)
     if not len(run_df):
         return
