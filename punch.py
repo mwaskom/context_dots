@@ -668,7 +668,7 @@ def behav_exit(log):
         return
     print "Overall Accuracy: %.2f" % run_df.correct.mean()
     print run_df.groupby("context").correct.mean()
-    print "Average RT: %.2f" % run_df.correct.mean()
+    print "Average RT: %.2f" % run_df.rt.mean()
     print run_df.groupby("context").rt.mean()
 
 
