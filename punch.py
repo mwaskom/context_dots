@@ -94,6 +94,8 @@ def behav(p, win, stims):
     # Set up the log files
     d_cols = list(d.columns)
     log_cols = d_cols + ["frame_id", "cue_dur", "response", "rt",
+                         "context_switch", "frame_switch",
+                         "color_switch", "motion_switch",
                          "correct", "isi", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
@@ -118,6 +120,17 @@ def behav(p, win, stims):
             motion = d.motion[t]
             color = d.color[t]
             target = [motion, color][context]
+
+            if not t:
+                t_info.update(
+                    {"%s_switch" % k: True for k in ["context", "frame",
+                                                     "motion", "color"]})
+            else:
+                t_info["context_switch"] = context != d.context[t - 1]
+                t_info["motion_switch"] = motion != d.motion[t - 1]
+                t_info["color_switch"] = color != d.color[t - 1]
+                t_info["frame_switch"] = (context != d.context[t - 1] or
+                                          cue != d.cue[t - 1])
 
             # Pre-stim fixation
             isi = uniform(*p.isi)
@@ -291,7 +304,7 @@ def train(p, win, stims):
                     motion_med = stats.nanmedian(block_rts)
 
         print "Final color coherence: %.2f" % coherences[1]
-        coherences = zip(["dot_mot_coh", "dot_col_coh"], coherences)
+        coherences = dict(zip(["dot_mot_coh", "dot_col_coh"], coherences))
         with open(p.coh_file_template % p.subject, "w") as fid:
             json.dump(coherences, fid)
         stims["finish"].draw()
