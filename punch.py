@@ -1,3 +1,9 @@
+"""Main script for the parametric uncertainty project.
+
+See project README for more information about this experiment and
+the way it is controlled by this program.
+
+"""
 from __future__ import division
 import sys
 import colorsys
@@ -63,7 +69,12 @@ def main(arglist):
     globals()[mode](p, win, stims)
 
 
+# Experiment Functions
+# ====================
+
+
 def behav(p, win, stims):
+    """Behavioral experiment."""
 
     # Max the screen brightness
     tools.max_brightness(p.monitor_name)
@@ -125,6 +136,7 @@ def behav(p, win, stims):
             color = d.color[t]
             target = [motion, color][context]
 
+            # Figure out if switches have happened and log
             if not t:
                 t_info.update(
                     {"%s_switch" % k: True for k in ["context", "frame",
@@ -161,7 +173,24 @@ def behav(p, win, stims):
         stims["finish"].draw()
 
 
+def behav_exit(log):
+    """Gets executed at the end of a behavioral run."""
+    # Save the dot stimulus data to a npz archive
+    dots_fname = log.fname.strip(".csv")
+    np.savez(dots_fname, **log.dots)
+
+    # Read in the data file and print some performance information
+    run_df = pd.read_csv(log.fname)
+    if not len(run_df):
+        return
+    print "Overall Accuracy: %.2f" % run_df.correct.mean()
+    print run_df.groupby("context").correct.mean()
+    print "Average RT: %.2f" % run_df.rt.mean()
+    print run_df.groupby("context").rt.mean()
+
+
 def train(p, win, stims):
+    """Training for behavioral and fMRI experiments."""
 
     # Max the screen brightness
     tools.max_brightness(p.monitor_name)
@@ -199,6 +228,7 @@ def train(p, win, stims):
         stim_event.clock.reset()
         while not trained:
 
+            # Reset the info for this block
             block_rts = []
             block_acc = []
 
@@ -215,26 +245,31 @@ def train(p, win, stims):
                               motion_coh=coherences[0],
                               color_coh=coherences[1])
 
+            # Draw the frame to start the block
             stims["frame"].draw()
             win.flip()
             tools.wait_check_quit(p.isi[1])
 
+            # Loop through the block trials
             for trial in xrange(p.n_per_block):
 
+                # Get the feature values for this trial
                 motion = randint(len(p.dot_dirs))
                 color = randint(len(p.dot_colors))
                 target = color if context else motion
 
+                # Set up the trial info drink
                 t_info = dict(motion=motion, color=color)
                 t_info.update(block_info)
 
+                # Stimulus event happens here
                 res = stim_event(context, motion, color, target)
                 t_info.update(res)
                 log.add_data(t_info)
-
                 block_rts.append(res["rt"])
                 block_acc.append(res["correct"])
 
+                # Draw the frame for the inter-trial interval
                 stims["frame"].draw()
                 win.flip()
                 tools.wait_check_quit(uniform(*p.isi))
@@ -316,7 +351,16 @@ def train(p, win, stims):
         stims["finish"].draw()
 
 
+def train_exit(log):
+    """Gets executed at the end of training."""
+    df = pd.read_csv(log.fname)
+    if not len(df):
+        return
+    print "Training took %d blocks" % df.block.unique().size
+
+
 def demo(p, win, stims):
+    """Brief demonstration of stimuli before training."""
 
     with tools.PresentationLoop(win):
         frame = stims["frame"]
@@ -358,8 +402,12 @@ def demo(p, win, stims):
                 tools.wait_and_listen("space")
 
 
-class EventEngine(object):
+# Stimulus Classes
+# ================
 
+
+class EventEngine(object):
+    """Controls execution of a random dot decision trial."""
     def __init__(self, win, stims, p, feedback=False):
 
         self.win = win
@@ -385,6 +433,7 @@ class EventEngine(object):
 
     def __call__(self, context, motion, color, target,
                  early=False, cue_dur=0):
+        """Executes the trial."""
 
         self.dots.new_positions()
 
@@ -428,7 +477,7 @@ class EventEngine(object):
         rt = np.nan
         keys = event.getKeys(timeStamped=resp_clock)
         for key, stamp in keys:
-            if key in ["q", "escape"]:
+            if key in self.p.quit_keys:
                 print "Subject quit execution"
                 core.quit()
             elif key in self.resp_keys:
@@ -454,7 +503,7 @@ class EventEngine(object):
 
 
 class Frame(object):
-
+    """Square frame around the dot field that serves as a context cute."""
     def __init__(self, win, p, fix=None):
 
         self.win = win
@@ -477,7 +526,7 @@ class Frame(object):
         self.frames = dict(zip(letters[:2 * p.frame_per_context], frames))
 
     def _make_floors(self, pattern, contrast, sf, phase):
-
+        """Create the PsychoPy objects for top and bottom frame components."""
         ypos = self.field_size / 2
         positions = [(0, -ypos), (0, ypos)]
         length = self.field_size + self.frame_width
@@ -504,7 +553,7 @@ class Frame(object):
         return elems
 
     def _make_walls(self, pattern, contrast, sf, phase):
-
+        """Create the PsychoPy objects for left and right frame components."""
         xpos = self.field_size / 2
         positions = [(-xpos, 0), (xpos, 0)]
         length = self.field_size + self.frame_width
@@ -531,22 +580,22 @@ class Frame(object):
         return elems
 
     def make_active(self, id):
-
+        """Set the frame for the particular task context."""
         self.active_index = letters.index(id)
         self.active_frame = self.frames[id]
 
     def flip_phase(self):
-
+        """Change the grating phase by half for feedback."""
         for elem in self.active_frame:
             elem.setPhase((elem.phase + .5) % 1)
 
     def reset_phase(self):
-
+        """Reset the grating phase following feedback."""
         for elem in self.active_frame:
             elem.setPhase(self.phases[self.active_index])
 
     def draw(self):
-
+        """Draw the components of the active frame to the screen."""
         for elem in self.active_frame:
             elem.draw()
         if self.fix is not None:
@@ -554,7 +603,7 @@ class Frame(object):
 
 
 class Dots(object):
-
+    """Random dot field stimulus."""
     def __init__(self, win, p):
 
         self.speed = p.dot_speed / 60
@@ -586,7 +635,7 @@ class Dots(object):
                                                   size=p.dot_count))
 
     def new_signals(self, mot_coh, col_coh):
-
+        """Decide which dots carry signal based on context coherence."""
         mot_signal = np.zeros(self.ndots, bool)
         col_signal = np.zeros(self.ndots, bool)
 
@@ -602,7 +651,7 @@ class Dots(object):
         self.mot_signal = mot_signal
 
     def new_colors(self, target_color):
-
+        """Set the hues for the signal and noise dots."""
         hues = np.random.uniform(size=self.ndots)
         t_hue = self.dot_hues[target_color]
         hues[self.col_signal] = t_hue
@@ -614,13 +663,13 @@ class Dots(object):
         self.dots.setColors(colors)
 
     def new_directions(self, target_dir):
-
+        """Set the directions for the signal and noise dots."""
         dirs = np.random.uniform(size=self.ndots) * 2 * np.pi
         dirs[self.mot_signal] = np.deg2rad(self.dot_dirs[target_dir])
         self.dirs = dirs
 
     def new_positions(self, mask=None):
-
+        """Set new positions for all, or a subset, of dots."""
         if mask is None:
             new_size = (self.ndots, 2)
             mask = np.ones((self.ndots, 2), bool)
@@ -637,7 +686,7 @@ class Dots(object):
         self.dots.setXYs(xys)
 
     def draw(self):
-
+        """Update the dot positions based on direction and draw."""
         xys = self.dots.xys
         xys[:, 0] += self.speed * np.cos(self.dirs)
         xys[:, 1] += self.speed * np.sin(self.dirs)
@@ -655,29 +704,6 @@ class Dots(object):
 
         self.dots.draw()
 
-
-def behav_exit(log):
-    """Gets executed at the end of a behavioral run."""
-    # Save the dot stimulus data to a npz archive
-    dots_fname = log.fname.strip(".csv")
-    np.savez(dots_fname, **log.dots)
-
-    # Read in the data file and print some performance information
-    run_df = pd.read_csv(log.fname)
-    if not len(run_df):
-        return
-    print "Overall Accuracy: %.2f" % run_df.correct.mean()
-    print run_df.groupby("context").correct.mean()
-    print "Average RT: %.2f" % run_df.rt.mean()
-    print run_df.groupby("context").rt.mean()
-
-
-def train_exit(log):
-    """Gets executed at the end of training."""
-    df = pd.read_csv(log.fname)
-    if not len(df):
-        return
-    print "Training took %d blocks" % df.block.unique().size
 
 if __name__ == "__main__":
     main(sys.argv[1:])

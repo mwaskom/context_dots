@@ -39,7 +39,7 @@ punch_base = dict(
     dot_val=1,
 
     # Response settings
-    quit_keys=["esc", "q"],
+    quit_keys=["escape", "q"],
     resp_keys=["comma", "period"],
     wait_keys=["space"],
 

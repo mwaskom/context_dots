@@ -1,3 +1,4 @@
+"""General functions and classes to support PsychoPy experiments."""
 from __future__ import division
 
 import os
@@ -21,7 +22,7 @@ class Params(object):
     """Stores all of the parameters needed during the experiment.
 
     Some parameters are set upon initialization from the file 'params.py',
-    others are set from the command line.
+    others can be set from the command line.
 
     """
     def __init__(self, exp_name, p_file='params'):
@@ -121,6 +122,88 @@ class DataLog(object):
             fid.write(data_str)
 
 
+class WindowInfo(object):
+    """Container for monitor information."""
+    def __init__(self, params, monitor):
+        """Extracts monitor information from params file and monitors.py."""
+        try:
+            mod = __import__("monitors")
+        except ImportError:
+            sys.exit("Could not import monitors.py in this directory.")
+
+        try:
+            minfo = getattr(mod, params.monitor_name.replace("-", "_"))
+        except IndexError:
+            sys.exit("Monitor name '%s' not found in monitors.py")
+
+        size = minfo["size"] if params.full_screen else (800, 600)
+        info = dict(units=params.monitor_units,
+                    fullscr=params.full_screen,
+                    allowGUI=not params.full_screen,
+                    color=params.window_color,
+                    size=size,
+                    monitor=monitor)
+
+        self.name = params.monitor_name
+        self.__dict__.update(info)
+        self.window_kwargs = info
+
+
+class WaitText(object):
+    """A class for showing text on the screen until a key is pressed. """
+    def __init__(self, win, text="Press a key to continue",
+                 advance_keys=None, quit_keys=None, **kwargs):
+        """Set the text stimulus information."""
+        self.win = win
+        if advance_keys is None:
+            advance_keys = ["space"]
+        self.advance_keys = advance_keys
+        if quit_keys is None:
+            quit_keys = ["escape", "q"]
+        self.quit_keys = quit_keys
+        self.listen_keys = quit_keys + advance_keys
+        self.text = visual.TextStim(win, text=text, **kwargs)
+
+    def draw(self, duration=np.inf):
+        """Dislpay text until a key is pressed or until duration elapses."""
+        clock = core.Clock()
+        t = 0
+        # Keep going for the duration
+        while t < duration:
+            t = clock.getTime()
+            self.text.draw()
+            self.win.flip()
+            for key in event.getKeys(keyList=self.listen_keys):
+                if key in self.quit_keys:
+                    core.quit()
+                elif key in self.advance_keys:
+                    return
+
+
+class PresentationLoop(object):
+    """Context manager for the main loop of an experiment."""
+    def __init__(self, win, log=None, exit_func=None, fileobj=None):
+        self.win = win
+        if log is not None:
+            self.log = log
+        if exit_func is not None:
+            self.exit_func = exit_func
+        if fileobj is not None:
+            self.fileobj = fileobj
+
+    def __enter__(self):
+
+        pass
+
+    def __exit__(self, type, value, traceback):
+
+        self.win.close()
+        if hasattr(self, "fileobj"):
+            self.fileobj.close()
+        if hasattr(self, "exit_func"):
+            self.exit_func(self.log)
+
+
 def archive_old_version(fname):
     """Move a data file to an numbered archive version, if exists."""
     if not os.path.exists(fname):
@@ -193,7 +276,7 @@ def wait_for_trigger(win, params):
 
 
 def precise_wait(win, clock, end_time, stim, refresh_rate=60):
-
+    """Wait with precision controlled by screen refreshes."""
     wait_time = end_time - clock.getTime()
     wait_flips = int(wait_time * refresh_rate)
     for frame in xrange(wait_flips):
@@ -203,7 +286,7 @@ def precise_wait(win, clock, end_time, stim, refresh_rate=60):
 
 
 def wait_and_listen(listen_for):
-
+    """Do nothing until a specific key is pressed."""
     should_wait = True
     while should_wait:
         for key in event.getKeys():
@@ -212,7 +295,7 @@ def wait_and_listen(listen_for):
 
 
 def draw_all(in_list):
-
+    """Draw every PsychoPy object in a list."""
     for stim in in_list:
         stim.draw()
 
@@ -257,86 +340,6 @@ def subject_specific_state(subject):
 
     state = RandomState(abs(hash(subject)))
     return state
-
-
-class WindowInfo(object):
-    """Container for monitor information."""
-    def __init__(self, params, monitor):
-        """Extracts monitor information from params file and monitors.py."""
-        try:
-            mod = __import__("monitors")
-        except ImportError:
-            sys.exit("Could not import monitors.py in this directory.")
-
-        try:
-            minfo = getattr(mod, params.monitor_name.replace("-", "_"))
-        except IndexError:
-            sys.exit("Monitor name '%s' not found in monitors.py")
-
-        size = minfo["size"] if params.full_screen else (800, 600)
-        info = dict(units=params.monitor_units,
-                    fullscr=params.full_screen,
-                    allowGUI=not params.full_screen,
-                    color=params.window_color,
-                    size=size,
-                    monitor=monitor)
-
-        self.name = params.monitor_name
-        self.__dict__.update(info)
-        self.window_kwargs = info
-
-
-class WaitText(object):
-    """A class for showing text on the screen until a key is pressed. """
-    def __init__(self, win, text="Press a key to continue",
-                 advance_keys=None, quit_keys=None, **kwargs):
-        """Set the text stimulus information."""
-        self.win = win
-        if advance_keys is None:
-            advance_keys = ["space"]
-        self.advance_keys = advance_keys
-        if quit_keys is None:
-            quit_keys = ["escape", "q"]
-        self.quit_keys = quit_keys
-        self.listen_keys = quit_keys + advance_keys
-        self.text = visual.TextStim(win, text=text, **kwargs)
-
-    def draw(self, duration=np.inf):
-        """Dislpay text until a key is pressed or until duration elapses."""
-        clock = core.Clock()
-        t = 0
-        #Keep going for the duration
-        while t < duration:
-            t = clock.getTime()
-            self.text.draw()
-            self.win.flip()
-            for key in event.getKeys(keyList=self.listen_keys):
-                if key in self.quit_keys:
-                    core.quit()
-                elif key in self.advance_keys:
-                    return
-
-
-class PresentationLoop(object):
-
-    def __init__(self, win, log=None, exit_func=None, fileobj=None):
-        self.win = win
-        if log is not None:
-            self.log = log
-        if exit_func is not None:
-            self.exit_func = exit_func
-        if fileobj is not None:
-            self.fileobj = fileobj
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, type, value, traceback):
-        self.win.close()
-        if hasattr(self, "fileobj"):
-            self.fileobj.close()
-        if hasattr(self, "exit_func"):
-            self.exit_func(self.log)
 
 
 def launch_window(params):
