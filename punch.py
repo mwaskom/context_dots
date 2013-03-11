@@ -35,7 +35,7 @@ def main(arglist):
 
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None, mask=p.fix_shape,
-                             color=p.fix_color, size=p.fix_size)
+                             color=p.fix_isi_color, size=p.fix_size)
 
     instruct_text = dedent(p.instruct_text)
     instruct = tools.WaitText(win, instruct_text,
@@ -418,6 +418,9 @@ class EventEngine(object):
         self.frame = stims["frame"]
         self.dots = stims["dots"]
         self.resp_keys = p.resp_keys
+        self.fix_orient_dur = p.fix_orient_dur
+        self.fix_isi_color = p.fix_isi_color
+        self.fix_stim_color = p.fix_stim_color
         self.clock = core.Clock()
         self.debug = p.debug
         if feedback:
@@ -448,6 +451,12 @@ class EventEngine(object):
 
         self.dots.new_colors(color)
         self.dots.new_directions(motion)
+
+        # Reorient cue
+        self.fix.setColor(self.fix_stim_color)
+        self.fix.draw()
+        self.win.flip()
+        tools.wait_check_quit(self.fix_orient_dur)
 
         # Early Cue Presentation
         if early:
@@ -495,6 +504,9 @@ class EventEngine(object):
                 self.win.flip()
 
             self.frame.reset_phase()
+
+        # Reset fixation color
+        self.fix.setColor(self.fix_isi_color)
 
         result = dict(correct=correct, rt=rt, response=response,
                       onset_time=onset_time, dropped_frames=dropped_frames)

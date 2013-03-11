@@ -12,8 +12,10 @@ punch_base = dict(
 
     # Fixation
     fix_size=.2,
-    fix_color="white",
+    fix_isi_color="black",
+    fix_stim_color="white",
     fix_shape="circle",
+    fix_orient_dur=.4,
 
     # Frame
     field_size=8,
@@ -52,8 +54,8 @@ punch_base = dict(
     # Communication
     instruct_size=0.5,
     instruct_text="""
-    Use the < and > keys to respond
-      while dots are on the screen
+     Use the < and > keys to respond
+    as soon as you make your decision
 
           Press space to begin
           """,
@@ -84,7 +86,7 @@ behav_base.update(punch_base)
 punch_behav = dict(
 
     monitor_name='mlw-mbair',
-    cue_dur=(1, 1.25),
+    cue_dur=(.85, 1),
 
     log_base="data/%(subject)s_behav_run%(run)d",
 
