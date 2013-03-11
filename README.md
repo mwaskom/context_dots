@@ -2,7 +2,7 @@
 
 ## Project Details 
 
-The PUnCH (or Parametric Uncertainty in the Control Hierarchy) experiment investigates behavioral and neural effects of parametrically manipulating uncertainty at multiple levels of task structure. 
+The PUnCH (or Parametric Uncertainty in the Control Hierarchy) experiment investigates the behavioral and neural effects of parametrically manipulating uncertainty at multiple levels of task structure. 
 
 ## Code Structure
 
