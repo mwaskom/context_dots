@@ -339,6 +339,7 @@ def train(p, win, stims):
                         step_size = p.reversal_steps[col_reversals]
                         step = color_adj * step_size
                         coherences[1] += step
+                        coherences[1] = max(p.color_coh_floor, coherences[1])
                     except IndexError:
                         trained = True
                 else:
