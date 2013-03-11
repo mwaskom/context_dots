@@ -263,7 +263,8 @@ def train(p, win, stims):
                 t_info.update(block_info)
 
                 # Stimulus event happens here
-                res = stim_event(context, motion, color, target)
+                res = stim_event(context, motion, color, target,
+                                 frame_with_orient=True)
                 t_info.update(res)
                 log.add_data(t_info)
                 block_rts.append(res["rt"])
@@ -436,7 +437,7 @@ class EventEngine(object):
                                                height=0.5)]
 
     def __call__(self, context, motion, color, target,
-                 early=False, cue_dur=0):
+                 early=False, cue_dur=0, frame_with_orient=False):
         """Executes the trial."""
 
         self.dots.new_positions()
@@ -453,9 +454,11 @@ class EventEngine(object):
         self.dots.new_colors(color)
         self.dots.new_directions(motion)
 
-        # Reorient cue
+        # Orient cue
         self.fix.setColor(self.fix_stim_color)
         self.fix.draw()
+        if frame_with_orient:
+            self.frame.draw()
         self.win.flip()
         tools.wait_check_quit(self.fix_orient_dur)
 
