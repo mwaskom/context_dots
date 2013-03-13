@@ -110,7 +110,7 @@ punch_train = dict(
     settle_thresh=.8,
     motion_coh_target=.2,
     color_coh_floor=.05,
-    reversal_steps=[.05, .025, .01],
+    reversal_steps=[.06, .04, .02],
     blocks_bw_break=4,
     isi=(.5, 2.5),  # uniform params (s)
 
