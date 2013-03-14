@@ -57,7 +57,7 @@ punch_base = dict(
      Use the < and > keys to respond
     as soon as you make your decision
 
-          Press space to begin
+               Press space to begin
           """,
 
     break_text_size=0.5,
