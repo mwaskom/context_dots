@@ -36,9 +36,9 @@ punch_base = dict(
     dot_life_std=20,  # in frames
     dot_dirs=[90, 270],
     dot_colors=["yellow", "cyan"],
-    dot_hues=[.1667, .5],  # hue coordinates in hsv space
-    dot_sat=1,
-    dot_val=1,
+    dot_hues=[0, 180],  # hue coordinates in husl space
+    dot_saturation=100,
+    dot_lightness=75,
 
     # Response settings
     quit_keys=["escape", "q"],

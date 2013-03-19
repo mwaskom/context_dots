@@ -6,10 +6,10 @@ the way it is controlled by this program.
 """
 from __future__ import division
 import sys
-import colorsys
 import json
 from string import letters
 from textwrap import dedent
+from husl import huslp_to_rgb
 import pandas as pd
 import numpy as np
 from numpy.random import randint, uniform
@@ -34,7 +34,8 @@ def main(arglist):
     win = tools.launch_window(p)
 
     # Set up the stimulus objects
-    fix = visual.GratingStim(win, tex=None, mask=p.fix_shape,
+    fix = visual.GratingStim(win, tex=None,
+                             mask=p.fix_shape, interpolate=True,
                              color=p.fix_isi_color, size=p.fix_size)
 
     instruct_text = dedent(p.instruct_text)
@@ -564,7 +565,8 @@ class Frame(object):
                                          ori=ori,
                                          phase=phase,
                                          contrast=contrast,
-                                         opacity=opacity)
+                                         opacity=opacity,
+                                         interpolate=True)
                 elems.append(obj)
         return elems
 
@@ -591,7 +593,8 @@ class Frame(object):
                                          ori=ori,
                                          phase=phase,
                                          contrast=contrast,
-                                         opacity=opacity)
+                                         opacity=opacity,
+                                         interpolate=True)
                 elems.append(obj)
         return elems
 
@@ -625,8 +628,8 @@ class Dots(object):
         self.speed = p.dot_speed / 60
         self.colors = p.dot_colors
         self.dot_hues = p.dot_hues
-        self.dot_sat = p.dot_sat
-        self.dot_val = p.dot_val
+        self.dot_saturation = p.dot_saturation
+        self.dot_lightness = p.dot_lightness
         self.dot_dirs = p.dot_dirs
         self.field_size = p.field_size - p.frame_width
         self.ndots = p.dot_count
@@ -668,13 +671,13 @@ class Dots(object):
 
     def new_colors(self, target_color):
         """Set the hues for the signal and noise dots."""
-        hues = np.random.uniform(size=self.ndots)
+        hues = np.random.randint(0, 360, size=self.ndots)
         t_hue = self.dot_hues[target_color]
         hues[self.col_signal] = t_hue
         self.hues = hues
-        s = self.dot_sat
-        v = self.dot_val
-        colors = np.array([colorsys.hsv_to_rgb(h, s, v) for h in hues])
+        s = self.dot_saturation
+        l = self.dot_lightness
+        colors = np.array([huslp_to_rgb(h, s, l) for h in hues])
         colors = colors * 2 - 1
         self.dots.setColors(colors)
 
