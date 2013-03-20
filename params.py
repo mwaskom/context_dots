@@ -18,7 +18,7 @@ punch_base = dict(
     fix_orient_dur=.4,
 
     # Frame
-    field_size=8,
+    field_size=7,
     frame_width=.5,
     frame_tex="sin",
     frame_per_context=2,
