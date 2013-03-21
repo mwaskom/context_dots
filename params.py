@@ -28,17 +28,15 @@ punch_base = dict(
     frame_patterns=["short", "long", "plaid", "plaid"],
 
     # Dots
-    dot_count=128,
+    dot_count=35,
     dot_shape="circle",
-    dot_speed=3,  # in degrees/sec
+    dot_speed=5,  # in degrees/sec
     dot_size=.1,  # in degrees
-    dot_life_mean=60,  # in frames
-    dot_life_std=20,  # in frames
     dot_dirs=[90, 270],
-    dot_colors=["yellow", "cyan"],
+    dot_colors=["red", "cyan"],
     dot_hues=[0, 180],  # hue coordinates in husl space
     dot_saturation=100,
-    dot_lightness=75,
+    dot_lightness=70,
 
     # Response settings
     quit_keys=["escape", "q"],

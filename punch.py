@@ -7,9 +7,10 @@ the way it is controlled by this program.
 from __future__ import division
 import sys
 import json
+import itertools
 from string import letters
 from textwrap import dedent
-from husl import huslp_to_rgb
+from husl import husl_to_rgb
 import pandas as pd
 import numpy as np
 from numpy.random import randint, uniform
@@ -100,8 +101,9 @@ def behav(p, win, stims):
     with open(coh_file) as fid:
         coherences = json.load(fid)
     p.__dict__.update(coherences)
-    coh_vals = [coherences["dot_%s_coh" % c] for c in ["mot", "col"]]
-    stims["dots"].new_signals(*coh_vals)
+    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in ["mot", "col"]]
+    stims["dots"].motion_coherence = mot_coh
+    stims["dots"].color_coherence = col_coh
 
     # Set up the log files
     d_cols = list(d.columns)
@@ -110,10 +112,13 @@ def behav(p, win, stims):
                          "color_switch", "motion_switch",
                          "correct", "isi", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
+    """
     log.dots = dict(mot_signal=stims["dots"].mot_signal,
                     col_signal=stims["dots"].col_signal,
                     dirs=np.zeros((p.n_trials, p.dot_count)),
                     hues=np.zeros((p.n_trials, p.dot_count)))
+    """
+    log.dots = dict()  # TODO
 
     # Execute the experiment
     with tools.PresentationLoop(win, log, behav_exit):
@@ -161,8 +166,8 @@ def behav(p, win, stims):
                              target, early, cue_dur)
             t_info.update(res)
             log.add_data(t_info)
-            log.dots["dirs"][t] = stims["dots"].dirs
-            log.dots["hues"][t] = stims["dots"].hues
+            #log.dots["dirs"][t] = stims["dots"].dirs
+            #log.dots["hues"][t] = stims["dots"].hues
 
             # Every n trials, let the subject take a quick break
             if t and not t % p.trials_bw_breaks:
@@ -397,7 +402,7 @@ def demo(p, win, stims):
                 frame.draw()
                 win.flip()
                 tools.wait_and_listen("space")
-                for refresh in xrange(p.fb_dur * 60):
+                for refresh in xrange(p.fb_dur * win.refresh_rate):
                     if not refresh % p.fb_freq:
                         frame.flip_phase()
                     frame.draw()
@@ -441,19 +446,19 @@ class EventEngine(object):
                  early=False, cue_dur=0, frame_with_orient=False):
         """Executes the trial."""
 
-        self.dots.new_positions()
-
         # Debugging information
         if self.debug:
             motion_deg = self.p.dot_dirs[motion]
+            motion_dir = {90: "up", 270: "down"}[motion_deg]
             color_name = self.p.dot_colors[color]
-            msg1 = "Motion: %d   Color: %s" % (motion_deg, color_name)
+            msg1 = "Motion: %s   Color: %s" % (motion_dir, color_name)
             self.debug_text[0].setText(msg1)
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
-        self.dots.new_colors(color)
-        self.dots.new_directions(motion)
+        self.dots.direction = self.p.dot_dirs[motion]
+        self.dots.hue = self.p.dot_hues[color]
+        self.dots.new_array()
 
         # Orient cue
         self.fix.setColor(self.fix_stim_color)
@@ -472,7 +477,7 @@ class EventEngine(object):
         # Main Stimulus Presentation
         dropped_before = self.win.nDroppedFrames
         event.clearEvents()
-        for frame in xrange(self.p.stim_dur * 60):
+        for frame in xrange(self.p.stim_dur * self.win.refresh_rate):
             self.dots.draw()
             self.frame.draw()
             if self.debug:
@@ -502,7 +507,7 @@ class EventEngine(object):
 
         # Feedback
         if self.feedback and not correct:
-            for frame in xrange(self.fb_dur * 60):
+            for frame in xrange(self.fb_dur * self.win.refresh_rate):
                 if not frame % self.fb_freq:
                     self.frame.flip_phase()
                 self.frame.draw()
@@ -625,19 +630,17 @@ class Dots(object):
     """Random dot field stimulus."""
     def __init__(self, win, p):
 
-        self.speed = p.dot_speed / 60
+        # Move some info from params into self
+        self.ndots = p.dot_count
+        self.speed = p.dot_speed / win.refresh_rate
         self.colors = p.dot_colors
         self.dot_hues = p.dot_hues
         self.dot_saturation = p.dot_saturation
         self.dot_lightness = p.dot_lightness
         self.dot_dirs = p.dot_dirs
         self.field_size = p.field_size - p.frame_width
-        self.ndots = p.dot_count
-        self.dot_life_mean = p.dot_life_mean
-        self.dot_life_std = p.dot_life_std
-        self.dimension = len(p.dot_colors)
-        assert self.dimension == len(p.dot_dirs)
 
+        # Initialize the Psychopy object
         dot_shape = None if p.dot_shape == "square" else p.dot_shape
         self.dots = visual.ElementArrayStim(win, "deg",
                                             fieldShape="square",
@@ -649,77 +652,77 @@ class Dots(object):
                                             elementTex=None,
                                             )
 
-        self.dot_life = np.round(np.random.normal(p.dot_life_mean,
-                                                  p.dot_life_std,
-                                                  size=p.dot_count))
+        # Use a cycle to control which set of dots is getting drawn
+        self._dot_cycle = itertools.cycle(range(3))
 
-    def new_signals(self, mot_coh, col_coh):
-        """Decide which dots carry signal based on context coherence."""
-        mot_signal = np.zeros(self.ndots, bool)
-        col_signal = np.zeros(self.ndots, bool)
-
-        n_col_signal = col_coh * self.ndots
-        col_signal[:n_col_signal] = True
-
-        n_mot_signal_a = mot_coh * n_col_signal
-        n_mot_signal_b = mot_coh * (self.ndots - n_col_signal)
-        mot_signal[:n_mot_signal_a] = True
-        mot_signal[n_col_signal:(n_col_signal + n_mot_signal_b)] = True
-
-        self.col_signal = col_signal
-        self.mot_signal = mot_signal
-
-    def new_colors(self, target_color):
-        """Set the hues for the signal and noise dots."""
-        hues = np.random.randint(0, 360, size=self.ndots)
-        t_hue = self.dot_hues[target_color]
-        hues[self.col_signal] = t_hue
-        self.hues = hues
-        s = self.dot_saturation
-        l = self.dot_lightness
-        colors = np.array([huslp_to_rgb(h, s, l) for h in hues])
-        colors = colors * 2 - 1
-        self.dots.setColors(colors)
-
-    def new_directions(self, target_dir):
-        """Set the directions for the signal and noise dots."""
-        dirs = np.random.uniform(size=self.ndots) * 2 * np.pi
-        dirs[self.mot_signal] = np.deg2rad(self.dot_dirs[target_dir])
-        self.dirs = dirs
-
-    def new_positions(self, mask=None):
-        """Set new positions for all, or a subset, of dots."""
-        if mask is None:
-            new_size = (self.ndots, 2)
-            mask = np.ones((self.ndots, 2), bool)
-        else:
-            new_size = (mask.sum(), 2)
+    def new_array(self):
 
         half_field = self.field_size / 2
-        new_xys = np.random.uniform(-half_field, half_field, new_size)
+        locs = np.linspace(-half_field, half_field, 5)
+        while True:
+            xys = np.random.uniform(-half_field, half_field,
+                                    size=(3, 2, self.ndots))
+            ps = np.zeros(3)
+            for i, field in enumerate(xys):
+                table, _, _ = np.histogram2d(*field, bins=(locs, locs))
+                if not table.all():
+                    continue
+                _, p, _, _ = stats.chi2_contingency(table)
+                ps[i] = p
+            if (ps > 0.1).all():
+                break
 
-        xys = self.dots.xys
-        if mask.all():
-            new_xys = new_xys.ravel()
-        xys[mask] = new_xys
-        self.dots.setXYs(xys)
+        self._xys = xys.transpose(2, 1, 0)
+
+    def _update_positions(self):
+        """Move some dots in one direction and redraw others randomly."""
+        active_dots = self._xys[..., self._dot_set]
+
+        # This is how we get an average coherence with random signal
+        signal = np.random.uniform(size=self.ndots) < self.motion_coherence
+
+        # Update the positions of the signal dots
+        dir = np.deg2rad(self.direction)
+        active_dots[signal, 0] += self.speed * 3 * np.cos(dir)
+        active_dots[signal, 1] += self.speed * 3 * np.sin(dir)
+
+        # Find new random positions for the noise dots
+        noise = ~signal
+        half_field = self.field_size / 2
+        active_dots[noise] = np.random.uniform(-half_field, half_field,
+                                               size=(noise.sum(), 2))
+
+        # Deal with signal dots going out of bounds
+        self._wrap_around(active_dots)
+
+        # Update the positions in the psychopy object and store in this object
+        self.dots.setXYs(active_dots)
+
+    def _update_colors(self):
+        """Set dot colors using the stored coherence value."""
+        coherent = np.random.uniform(size=self.ndots) < self.color_coherence
+        hues = np.random.randint(360, size=self.ndots).astype(float)
+        hues[coherent] = self.hue
+        s = float(self.dot_saturation)
+        l = float(self.dot_lightness)
+        rgb = np.array([husl_to_rgb(h, s, l) for h in hues])
+        rgb[rgb < 0] = 0
+        rgb[rgb > 1] = 1
+        rgb = rgb * 2 - 1
+        self.dots.setColors(rgb)
+
+    def _wrap_around(self, dots):
+        """Redraw dots off the FOV on the other side."""
+        half_field = self.field_size / 2
+        out_of_bounds = np.abs(dots) > half_field
+        pos = dots[out_of_bounds]
+        dots[out_of_bounds] = -1 * (pos / np.abs(pos)) * half_field
 
     def draw(self):
         """Update the dot positions based on direction and draw."""
-        xys = self.dots.xys
-        xys[:, 0] += self.speed * np.cos(self.dirs)
-        xys[:, 1] += self.speed * np.sin(self.dirs)
-        bound = (self.field_size / 2)
-        self.dots.setXYs(xys)
-        out_of_bounds = np.any(np.abs(xys) > bound, axis=1)
-        self.new_positions(out_of_bounds)
-        self.dot_life -= 1
-        dead_dots = self.dot_life < 0
-        self.new_positions(dead_dots)
-        self.dot_life[dead_dots] = np.round(
-            np.random.normal(self.dot_life_mean,
-                             self.dot_life_std,
-                             size=self.ndots))
+        self._dot_set = self._dot_cycle.next()
+        self._update_positions()
+        self._update_colors()
 
         self.dots.draw()
 
