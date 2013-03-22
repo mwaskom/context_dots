@@ -33,6 +33,7 @@ def main(arglist):
 
     # Open up the stimulus window
     win = tools.launch_window(p)
+    win.refresh_rate = 60  # TODO FIX
 
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
@@ -448,17 +449,16 @@ class EventEngine(object):
 
         # Debugging information
         if self.debug:
-            motion_deg = self.p.dot_dirs[motion]
-            motion_dir = {90: "up", 270: "down"}[motion_deg]
-            color_name = self.p.dot_colors[color]
-            msg1 = "Motion: %s   Color: %s" % (motion_dir, color_name)
+            dir_name = self.p.dot_dir_names[motion]
+            color_name = self.p.dot_color_names[color]
+            msg1 = "Motion: %s   Color: %s" % (dir_name, color_name)
             self.debug_text[0].setText(msg1)
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
-        self.dots.direction = self.p.dot_dirs[motion]
-        self.dots.hue = self.p.dot_hues[color]
         self.dots.new_array()
+        self.dots.direction = self.p.dot_dirs[motion]
+        self.dots.color = self.p.dot_colors[color]
 
         # Orient cue
         self.fix.setColor(self.fix_stim_color)
@@ -633,11 +633,8 @@ class Dots(object):
         # Move some info from params into self
         self.ndots = p.dot_count
         self.speed = p.dot_speed / win.refresh_rate
-        self.colors = p.dot_colors
-        self.dot_hues = p.dot_hues
-        self.dot_saturation = p.dot_saturation
-        self.dot_lightness = p.dot_lightness
-        self.dot_dirs = p.dot_dirs
+        self.colors = np.array(p.dot_colors)
+        self.dirs = p.dot_dirs
         self.field_size = p.field_size - p.frame_width
 
         # Initialize the Psychopy object
@@ -698,17 +695,28 @@ class Dots(object):
         # Update the positions in the psychopy object and store in this object
         self.dots.setXYs(active_dots)
 
+    def _update_colors_off(self):
+        """Set dot colors using the stored coherence value."""
+        signal = np.random.uniform(size=self.ndots) < self.color_coherence
+        rgb = np.zeros((self.ndots, 3))
+        rgb[signal] = self.color
+
+        noise = ~signal
+        noise_colors = (np.random.uniform(size=noise.sum()) < 0.5).astype(int)
+        rgb[noise] = self.colors[noise_colors]
+        rgb = rgb * 2 - 1
+        self.dots.setColors(rgb)
+
     def _update_colors(self):
         """Set dot colors using the stored coherence value."""
-        coherent = np.random.uniform(size=self.ndots) < self.color_coherence
+        signal = np.random.uniform(size=self.ndots) < self.color_coherence
         hues = np.random.randint(360, size=self.ndots).astype(float)
-        hues[coherent] = self.hue
+        hues[signal] = self.hue
         s = float(self.dot_saturation)
         l = float(self.dot_lightness)
         rgb = np.array([husl_to_rgb(h, s, l) for h in hues])
         rgb[rgb < 0] = 0
         rgb[rgb > 1] = 1
-        rgb = rgb * 2 - 1
         self.dots.setColors(rgb)
 
     def _wrap_around(self, dots):

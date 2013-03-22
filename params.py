@@ -8,7 +8,7 @@ punch_base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
-    window_color=0,
+    window_color=-.5,
 
     # Fixation
     fix_size=.2,
@@ -33,10 +33,13 @@ punch_base = dict(
     dot_speed=5,  # in degrees/sec
     dot_size=.1,  # in degrees
     dot_dirs=[90, 270],
-    dot_colors=["red", "cyan"],
-    dot_hues=[0, 180],  # hue coordinates in husl space
+    dot_dir_names=["up", "down"],
+    dot_colors=[(1., 0.25490196, 0.00784314),
+                (0.01960784, 0.5372549, 1.)],
+    dot_color_names=["red", "blue"],
+    dot_hues=[0, 180],
     dot_saturation=100,
-    dot_lightness=70,
+    dot_lightness=75,
 
     # Response settings
     quit_keys=["escape", "q"],
