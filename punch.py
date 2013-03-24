@@ -456,9 +456,10 @@ class EventEngine(object):
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
-        self.dots.new_array()
         self.dots.direction = self.p.dot_dirs[motion]
         self.dots.color = self.p.dot_colors[color]
+        self.dots.hue = self.p.dot_hues[color]
+        self.dots.new_array()
 
         # Orient cue
         self.fix.setColor(self.fix_stim_color)
@@ -634,7 +635,8 @@ class Dots(object):
         self.ndots = p.dot_count
         self.speed = p.dot_speed / win.refresh_rate
         self.colors = np.array(p.dot_colors)
-        self.dirs = p.dot_dirs
+        self.saturation = p.dot_saturation
+        self.lightness = p.dot_lightness
         self.field_size = p.field_size - p.frame_width
 
         # Initialize the Psychopy object
@@ -695,7 +697,7 @@ class Dots(object):
         # Update the positions in the psychopy object and store in this object
         self.dots.setXYs(active_dots)
 
-    def _update_colors_off(self):
+    def _update_colors(self):
         """Set dot colors using the stored coherence value."""
         signal = np.random.uniform(size=self.ndots) < self.color_coherence
         rgb = np.zeros((self.ndots, 3))
@@ -707,13 +709,13 @@ class Dots(object):
         rgb = rgb * 2 - 1
         self.dots.setColors(rgb)
 
-    def _update_colors(self):
+    def _update_colors_off(self):
         """Set dot colors using the stored coherence value."""
         signal = np.random.uniform(size=self.ndots) < self.color_coherence
         hues = np.random.randint(360, size=self.ndots).astype(float)
         hues[signal] = self.hue
-        s = float(self.dot_saturation)
-        l = float(self.dot_lightness)
+        s = float(self.saturation)
+        l = float(self.lightness)
         rgb = np.array([husl_to_rgb(h, s, l) for h in hues])
         rgb[rgb < 0] = 0
         rgb[rgb > 1] = 1
