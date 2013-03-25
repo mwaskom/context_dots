@@ -31,13 +31,13 @@ cni_lcd2 = dict(monitor_name='cni_lcd2',
 
 mlw_mbpro = dict(monitor_name='mlw-mbpro',
                  width=33.2,
-                 size=[1400, 900],
+                 size=[1440, 900],
                  distance=63,
                  notes="")
 
 mlw_mbair = dict(monitor_name='mlw-mbair',
                  width=30.5,
-                 size=[1400, 900],
+                 size=[1440, 900],
                  distance=63,
                  notes="")
 
