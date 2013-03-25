@@ -205,6 +205,9 @@ def train(p, win, stims):
     # Draw the instructions
     stims["instruct"].draw()
 
+    # Got a local reference to the dots object
+    dots = stims["dots"]
+
     # Set up the log object
     log_cols = ["block", "learned", "settled",
                 "context", "cue", "frame_id",
@@ -244,7 +247,9 @@ def train(p, win, stims):
                 cue = (cue + 1) % p.frame_per_context
             frame_id = p.frame_ids[context][cue]
             stims["frame"].make_active(frame_id)
-            stims["dots"].new_signals(*coherences)
+            mot_coh, col_coh = coherences
+            dots.motion_coherence = mot_coh
+            dots.color_coherence = col_coh
 
             block_info = dict(block=block, context=context,
                               cue=cue, frame_id=frame_id,

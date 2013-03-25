@@ -7,7 +7,7 @@ punch_base = dict(
     # Display setup
     monitor_units="deg",
     full_screen=True,
-    screen_number=2,
+    screen_number=1,
     window_color=-1./3,
 
     # Fixation
@@ -106,7 +106,7 @@ punch_train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=10,
+    n_per_block=4,
     full_coh_thresh=1,
     at_thresh_blocks=2,
     settle_slope=.1,
