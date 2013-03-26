@@ -15,7 +15,7 @@ punch_base = dict(
     fix_isi_color="black",
     fix_stim_color="white",
     fix_shape="circle",
-    fix_orient_dur=.4,
+    fix_orient_dur=.5,
 
     # Frame
     field_size=8,

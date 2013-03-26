@@ -16,7 +16,15 @@ def main(arglist):
     globals()[mode](p)
 
 
-def behav(p):
+def scan(p):
+
+    pass
+   
+
+color_freqs = [.5, 1 / 3, .8, 2 / 3, .2, 2 / 3, .5, .8, .2, 1 / 3]
+block_dur = [1, 0, 1, 0, 1, 1, 0, 0, 0, 1]
+
+def behav_old(p):
 
     # Here's some messy functional combinatoric stuff
     # This creates all possible combinations of the
