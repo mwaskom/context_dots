@@ -19,10 +19,91 @@ def main(arglist):
 def scan(p):
 
     pass
-   
 
-color_freqs = [.5, 1 / 3, .8, 2 / 3, .2, 2 / 3, .5, .8, .2, 1 / 3]
-block_dur = [1, 0, 1, 0, 1, 1, 0, 0, 0, 1]
+
+def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
+
+    # Set up the empty output lists
+    trial_type = []
+    context = []
+    motion = []
+    color = []
+    early = []
+    stim = []
+    cue = []
+
+    # Get the motion frequency in a way that avoids float issues
+    motion_pct = 100 - color_pct
+
+    # Fail message
+    fail = "Failed to balance design"
+
+    for type, t_prob in trial_probs.items():
+        of_type = t_prob * n_trials
+        assert of_type == int(of_type), fail
+        of_type = int(of_type)
+
+        # Set up the variables that are stable over this sub-block
+        trial_type.extend([type] * of_type)
+        early_cue = False if type == "later" else True
+        with_stim = False if type == "catch" else True
+        early += [early_cue] * of_type
+        stim += [with_stim] * of_type
+
+        # Build the sub-components of each trial type
+        # First the trial context
+        for c_i, c_f in enumerate([motion_pct, color_pct]):
+            of_context = (c_f / 100) * of_type
+            assert of_context == int(of_context), fail
+            of_context = int(of_context)
+
+            context += [c_i] * of_context
+
+            # Balance cue identity within context
+            for f_i in range(frame_per_context):
+                f_f = 1 / frame_per_context
+                of_frame = f_f * of_context
+                assert of_frame == int(of_frame), fail
+                of_frame = int(of_frame)
+
+                cue += [f_i] * of_frame
+
+                # Now balance the identity of the two features
+                if type == "catch":
+                    motion += [np.nan] * of_frame
+                    color += [np.nan] * of_frame
+                else:
+                    dirs = np.zeros(of_frame, int)
+                    dirs[::2] = 1
+                    motion += dirs.tolist()
+                    hues = np.zeros(of_frame, int)
+                    hues[of_frame / 2:] = 1
+                    color += hues.tolist()
+
+    # Get a record to the context frequency for convenience
+    context_freq = np.where(np.array(context) == 1,
+                            color_pct, motion_pct).astype(float) / 100
+
+    # Construct a DataFrame with these schedules
+    sched = pd.DataFrame(dict(trial_type=trial_type,
+                              context=context,
+                              early=early,
+                              stim=stim,
+                              cue=cue,
+                              motion=motion,
+                              color=color,
+                              context_freq=context_freq),
+                         columns=["trial_type", "context",
+                                  "early", "stim", "cue",
+                                  "motion", "color",
+                                  "context_freq"])
+
+    # Check other constraints
+    for c_i, c_pct in enumerate([motion_pct, color_pct]):
+        assert (sched.context == c_i).mean() == c_pct / 100
+
+    return sched
+
 
 def behav_old(p):
 
@@ -81,6 +162,8 @@ def behav_old(p):
 
             # Balance cue identity within cue timing
             for f_i in range(p.frame_per_context):
+                f_f = 1 / p.frame_per_context
+
                 cue += [f_i] * int((e_f * f_f * p.trials_per_run))
 
                 # Balance context with respect to cue type

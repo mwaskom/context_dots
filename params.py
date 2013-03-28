@@ -1,3 +1,4 @@
+from __future__ import division
 # Base for everything that's
 # going to support data collection
 punch_base = dict(
@@ -71,6 +72,16 @@ punch_base = dict(
         Please tell the experimenter!
         """,
 
+    # Design
+    n_runs=6,
+    color_pcts=[50, 35, 80, 65, 20, 65, 50, 80, 20, 35],
+    block_duration=[1, 0, 1, 0, 1, 1, 0, 0, 0, 1],
+    block_freqs=(1 / 3, 2 / 3),
+    n_per_condition=120,
+    trial_probs=dict(later=1 / 3,
+                     early=1 / 3,
+                     catch=1 / 3),
+
 )
 
 # Base for behavioral design and collection
@@ -120,14 +131,5 @@ punch_train = dict(
 
 )
 punch_train.update(punch_base)
-
-# Top-level parameters for behavioral design
-behav_design = dict(
-
-    trials_per_run=100,
-    early_cue_prob=.5,
-
-)
-behav_design.update(behav_base)
 
 punch_demo = punch_train
