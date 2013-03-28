@@ -22,7 +22,34 @@ def scan(p):
 
 
 def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
+    """Make an unrandomized dataframe with trials for one condition.
 
+    Here `condition` is taken to mean a particular distribution of
+    context frequencies, e.g. [80 motion / 20 color].
+
+    Parameters
+    ----------
+    n_trials : int
+        number of trials for the condition.
+    color_pct : int
+        percentage of trials that are in color context
+    frame_per_context : int
+        number of frames (`cue`) assigned to each of the contexts
+    trial_probs : dict with keys from {early, later, catch}
+        mapping from trial type to percentage of trials of that type
+
+    Returns
+    -------
+    sched : pandas DataFrame
+        unrandomized schedule with trial info
+
+    Raises
+    ------
+    AssertionError
+        many asserts to check for balance of various conditions
+        but probably not exhaustive!
+
+    """
     # Set up the empty output lists
     trial_type = []
     context = []
@@ -38,6 +65,10 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
     # Fail message
     fail = "Failed to balance design"
 
+    # Check the inputs
+    assert isinstance(color_pct, int), "`color_pct` must be an integer"
+    assert sum(trial_probs.values()) == 1, "`trial_probs` is ill-formed"
+
     for type, t_prob in trial_probs.items():
         of_type = t_prob * n_trials
         assert of_type == int(of_type), fail
@@ -52,8 +83,8 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
 
         # Build the sub-components of each trial type
         # First the trial context
-        for c_i, c_f in enumerate([motion_pct, color_pct]):
-            of_context = (c_f / 100) * of_type
+        for c_i, c_p in enumerate([motion_pct, color_pct]):
+            of_context = (c_p / 100) * of_type
             assert of_context == int(of_context), fail
             of_context = int(of_context)
 
@@ -100,7 +131,12 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
 
     # Check other constraints
     for c_i, c_pct in enumerate([motion_pct, color_pct]):
-        assert (sched.context == c_i).mean() == c_pct / 100
+        assert (sched.context == c_i).mean() == c_pct / 100, fail
+    early_bal = sched.groupby("early").context.mean() * 100
+    assert map(int, early_bal.tolist()) == [color_pct, color_pct], fail
+    stim_bal = sched.groupby("stim").context.mean() * 100
+    assert map(int, stim_bal.tolist()) == [color_pct, color_pct], fail
+    assert len(sched.groupby("context").cue.mean().unique()) == 1, fail
 
     return sched
 
