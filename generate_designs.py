@@ -141,6 +141,43 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
     return sched
 
 
+def balance_switches(sched, tol=.01):
+    """Permute trials to balance context switches.
+
+    In the long run, the average switch trial frequency should be
+    1 - context frequency. This permutes a schedule DataFrame until
+    it is close to that set of frequencies.
+
+    Parameters
+    ----------
+    sched : pandas DataFrame
+        schedule from condition_starter
+    tol : float
+        tolerance threshold for actual vs. ideal switch freq array
+
+    Returns
+    -------
+    permuted pandas DataFrame
+
+    """
+    color_pct = int(sched.context_freq[sched.context == 1].unique()[0] * 100)
+    context_freqs = np.array([100 - color_pct, color_pct], float) / 100
+    desired = 1 - context_freqs
+
+    switch = pd.Series(np.ones(len(sched), bool))
+    index = sched.index
+    while True:
+        s_i = sched.reindex(np.random.permutation(index))
+        context = np.array(s_i.context)
+        switch[1:] = context[1:] != context[:-1]
+        actual = switch.groupby(context).mean()
+        if np.allclose(actual, desired, atol=tol):
+            break
+
+    s_i.index = np.arange(len(s_i))
+    return s_i
+
+
 def behav_old(p):
 
     # Here's some messy functional combinatoric stuff
