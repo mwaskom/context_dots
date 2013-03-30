@@ -82,6 +82,8 @@ punch_base = dict(
                      early=1 / 3,
                      catch=1 / 3),
 
+    switch_tol=0.01,
+    trial_trans_tol=0.1,
 )
 
 # Base for behavioral design and collection

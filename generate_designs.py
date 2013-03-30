@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from itertools import permutations, product
 import tools
+import moss
 
 
 def main(arglist):
@@ -21,11 +22,58 @@ def scan(p):
     pass
 
 
-def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
-    """Make an unrandomized dataframe with trials for one condition.
+def condition_schedule(p, color_pct):
+    """Generate the ordered schedule of trial info subject to constraints.
 
     Here `condition` is taken to mean a particular distribution of
     context frequencies, e.g. [80 motion / 20 color].
+
+    Parameters
+    ----------
+    p : Params object
+        record of experimental parameters
+    color_pct : int
+        percentage of trials that are in color context
+
+    Returns
+    -------
+    sched : pandas DataFrame
+        schedule of trial information
+
+    """
+    # Unpack the parameters
+    n_trials = p.n_per_condition
+    frame_per_context = p.frame_per_context
+    trial_probs = pd.Series(p.trial_probs)
+
+    # Check the inputs
+    assert isinstance(color_pct, int), "`color_pct` must be an integer"
+    assert trial_probs.sum() == 1, "`trial_probs` is ill-formed"
+
+    # Construct the base schedule
+    sched = condition_starter(n_trials, color_pct,
+                              frame_per_context, trial_probs)
+
+    # Get the ideal transition matrix for trial types
+    trial_types = trial_probs.index
+    ideal_trans = pd.DataFrame(columns=trial_types, index=trial_types)
+    for key in trial_types:
+        ideal_trans[key].update(trial_probs)
+    ideal_trans = np.array(ideal_trans)
+
+    # Now work out the order of trials
+    while True:
+        sched = balance_switches(sched, p.switch_tol)
+        actual = np.array(moss.transition_probabilities(sched.trial_type))
+        cost = np.abs(ideal_trans - actual).sum()
+        if cost < p.trial_trans_tol:
+            break
+
+    return sched
+
+
+def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
+    """Make an unrandomized dataframe with trials for one condition.
 
     Parameters
     ----------
@@ -35,7 +83,7 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
         percentage of trials that are in color context
     frame_per_context : int
         number of frames (`cue`) assigned to each of the contexts
-    trial_probs : dict with keys from {early, later, catch}
+    trial_probs : Series with keys from {early, later, catch}
         mapping from trial type to percentage of trials of that type
 
     Returns
@@ -65,11 +113,7 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
     # Fail message
     fail = "Failed to balance design"
 
-    # Check the inputs
-    assert isinstance(color_pct, int), "`color_pct` must be an integer"
-    assert sum(trial_probs.values()) == 1, "`trial_probs` is ill-formed"
-
-    for type, t_prob in trial_probs.items():
+    for type, t_prob in trial_probs.iteritems():
         of_type = t_prob * n_trials
         assert of_type == int(of_type), fail
         of_type = int(of_type)
