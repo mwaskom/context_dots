@@ -47,16 +47,36 @@ def scan(p):
     all_trials = np.arange(len(full_schedule))
     full_schedule.index = all_trials
     run_indices = np.split(all_trials, p.n_runs)
-
     run_schedules = []
     for run_i in range(p.n_runs):
         run_sched = full_schedule.ix[run_indices[run_i]]
-        run_trials = np.arange(len(run_sched))
+        run_trials = np.arange(p.trials_per_run)
         run_sched.index = run_trials
         run_sched["run"] = run_i + 1
         run_schedules.append(run_sched)
 
+    # Sort out the null event timing
+    for sched in run_schedules:
+        null_trs = p.trs_per_run - sched.trial_dur.sum()
+        iti = trial_timing(p.iti_geom_param, p.max_iti,
+                           null_trs, p.trials_per_run)
+        sched["iti"] = iti
+        total_trs = sched.iti.sum() + sched.trial_dur.sum()
+        assert total_trs == p.trs_per_run, "Failed to distribute timing."
+
     return run_schedules
+
+
+def trial_timing(geom_param, max_iti, null_trs, n_trials):
+
+    while True:
+        candidates = np.random.geometric(geom_param, (100, n_trials))
+        candidates[candidates > max_iti] = max_iti
+        right_length = candidates.sum(axis=1) == null_trs
+        if not any(right_length):
+            continue
+        else:
+            return candidates[right_length][0]
 
 
 def condition_schedule(p, color_pct):
@@ -105,6 +125,11 @@ def condition_schedule(p, color_pct):
         cost = np.abs(ideal_trans - actual).sum()
         if cost < p.trial_trans_tol:
             break
+
+    # Get a record of how long each trial will take
+    sched["trial_dur"] = np.nan
+    for type, dur in p.trial_durations.iteritems():
+        sched.trial_dur[sched.trial_type == type] = dur
 
     return sched
 
