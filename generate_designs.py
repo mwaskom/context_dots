@@ -2,9 +2,9 @@
 from __future__ import division
 import sys
 from string import letters
+from itertools import permutations, product
 import pandas as pd
 import numpy as np
-from itertools import permutations, product
 import tools
 import moss
 
@@ -18,8 +18,47 @@ def main(arglist):
 
 
 def scan(p):
+    """Generate design files for the scanning component of the project."""
+    # Check the inputs
+    assert sum(p.block_division) == 1, "`block_division` is poorly formed"
 
-    pass
+    # Use a consistent random state
+    seed = sum(map(ord, list("punch")))
+    p.random_state = np.random.RandomState(seed)
+
+    # Build a dictionary of condition schedules, separated
+    # into short/long condition blocks
+    short_dur = p.trials_per_condition * p.block_division[0]
+    conditions = np.sort(np.unique(p.color_pcts))
+    sched_dict = {}
+    for pct in conditions:
+        sched = condition_schedule(p, pct)
+        sched_pair = (sched[:short_dur], sched[short_dur:])
+        sched_dict[pct] = sched_pair
+
+    # Order the blocks into a full schedule for the experiment
+    full_schedule = []
+    block_info = zip(p.color_pcts, p.block_duration)
+    for i, (pct, dur) in enumerate(block_info):
+        block_sched = sched_dict[pct][dur]
+        block_sched["block"] = i
+        full_schedule.append(block_sched)
+    full_schedule = pd.concat(full_schedule)
+
+    # Now split the full schedule into runs
+    all_trials = np.arange(len(full_schedule))
+    full_schedule.index = all_trials
+    run_indices = np.split(all_trials, p.n_runs)
+
+    run_schedules = []
+    for run_i in range(p.n_runs):
+        run_sched = full_schedule.ix[run_indices[run_i]]
+        run_trials = np.arange(len(run_sched))
+        run_sched.index = run_trials
+        run_sched["run"] = run_i + 1
+        run_schedules.append(run_sched)
+
+    return run_schedules
 
 
 def condition_schedule(p, color_pct):
@@ -42,7 +81,7 @@ def condition_schedule(p, color_pct):
 
     """
     # Unpack the parameters
-    n_trials = p.n_per_condition
+    n_trials = p.trials_per_condition
     frame_per_context = p.frame_per_context
     trial_probs = pd.Series(p.trial_probs)
 
@@ -63,7 +102,7 @@ def condition_schedule(p, color_pct):
 
     # Now work out the order of trials
     while True:
-        sched = balance_switches(sched, p.switch_tol)
+        sched = balance_switches(sched, p.switch_tol, p.random_state)
         actual = np.array(moss.transition_probabilities(sched.trial_type))
         cost = np.abs(ideal_trans - actual).sum()
         if cost < p.trial_trans_tol:
@@ -185,7 +224,7 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
     return sched
 
 
-def balance_switches(sched, tol=.01):
+def balance_switches(sched, tol=.01, random_state=None):
     """Permute trials to balance context switches.
 
     In the long run, the average switch trial frequency should be
@@ -198,12 +237,17 @@ def balance_switches(sched, tol=.01):
         schedule from condition_starter
     tol : float
         tolerance threshold for actual vs. ideal switch freq array
+    random_state : numpy RandomState
+        allows for consistent randomization over executions
 
     Returns
     -------
     permuted pandas DataFrame
 
     """
+    if random_state is None:
+        random_state = np.random.RandomState()
+
     color_pct = int(sched.context_freq[sched.context == 1].unique()[0] * 100)
     context_freqs = np.array([100 - color_pct, color_pct], float) / 100
     desired = 1 - context_freqs
@@ -211,7 +255,7 @@ def balance_switches(sched, tol=.01):
     switch = pd.Series(np.ones(len(sched), bool))
     index = sched.index
     while True:
-        s_i = sched.reindex(np.random.permutation(index))
+        s_i = sched.reindex(random_state.permutation(index))
         context = np.array(s_i.context)
         switch[1:] = context[1:] != context[:-1]
         actual = switch.groupby(context).mean()
