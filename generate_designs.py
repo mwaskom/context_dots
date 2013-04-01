@@ -27,18 +27,18 @@ def scan(p):
     # Build a dictionary of condition schedules, separated
     # into short/long condition blocks
     short_dur = p.trials_per_condition * p.block_division[0]
-    conditions = np.sort(np.unique(p.color_pcts))
+    conditions = np.sort(np.unique(p.color_freqs))
     sched_dict = {}
-    for pct in conditions:
-        sched = condition_schedule(p, pct)
+    for freq in conditions:
+        sched = condition_schedule(p, freq)
         sched_pair = (sched[:short_dur], sched[short_dur:])
-        sched_dict[pct] = sched_pair
+        sched_dict[freq] = sched_pair
 
     # Order the blocks into a full schedule for the experiment
     full_schedule = []
-    block_info = zip(p.color_pcts, p.block_duration)
-    for i, (pct, dur) in enumerate(block_info):
-        block_sched = sched_dict[pct][dur]
+    block_info = zip(p.color_freqs, p.block_duration)
+    for i, (freq, dur) in enumerate(block_info):
+        block_sched = sched_dict[freq][dur]
         block_sched["block"] = i
         full_schedule.append(block_sched)
     full_schedule = pd.concat(full_schedule)
@@ -79,7 +79,7 @@ def trial_timing(geom_param, max_iti, null_trs, n_trials):
             return candidates[right_length][0]
 
 
-def condition_schedule(p, color_pct):
+def condition_schedule(p, color_freq):
     """Generate the ordered schedule of trial info subject to constraints.
 
     Here `condition` is taken to mean a particular distribution of
@@ -89,8 +89,8 @@ def condition_schedule(p, color_pct):
     ----------
     p : Params object
         record of experimental parameters
-    color_pct : int
-        percentage of trials that are in color context
+    color_freq : freq
+        frequency of trials that are in color context
 
     Returns
     -------
@@ -104,11 +104,10 @@ def condition_schedule(p, color_pct):
     trial_probs = pd.Series(p.trial_probs)
 
     # Check the inputs
-    assert isinstance(color_pct, int), "`color_pct` must be an integer"
     assert trial_probs.sum() == 1, "`trial_probs` is ill-formed"
 
     # Construct the base schedule
-    sched = condition_starter(n_trials, color_pct,
+    sched = condition_starter(n_trials, color_freq,
                               frame_per_context, trial_probs)
 
     # Get the ideal transition matrix for trial types
@@ -134,15 +133,15 @@ def condition_schedule(p, color_pct):
     return sched
 
 
-def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
+def condition_starter(n_trials, color_freq, frame_per_context, trial_probs):
     """Make an unrandomized dataframe with trials for one condition.
 
     Parameters
     ----------
     n_trials : int
         number of trials for the condition.
-    color_pct : int
-        percentage of trials that are in color context
+    color_freq : float
+        frequency of trials that are in color context
     frame_per_context : int
         number of frames (`cue`) assigned to each of the contexts
     trial_probs : Series with keys from {early, later, catch}
@@ -169,8 +168,8 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
     stim = []
     cue = []
 
-    # Get the motion frequency in a way that avoids float issues
-    motion_pct = 100 - color_pct
+    # Get the motion frequency
+    motion_freq = 1 - color_freq
 
     # Fail message
     fail = "Failed to balance design"
@@ -189,10 +188,9 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
 
         # Build the sub-components of each trial type
         # First the trial context
-        for c_i, c_p in enumerate([motion_pct, color_pct]):
-            of_context = (c_p / 100) * of_type
-            assert of_context == int(of_context), fail
-            of_context = int(of_context)
+        for c_i, c_p in enumerate([motion_freq, color_freq]):
+            of_context = c_p * of_type
+            of_context = np.round(of_context)
 
             context += [c_i] * of_context
 
@@ -200,8 +198,7 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
             for f_i in range(frame_per_context):
                 f_f = 1 / frame_per_context
                 of_frame = f_f * of_context
-                assert of_frame == int(of_frame), fail
-                of_frame = int(of_frame)
+                of_frame = np.round(of_frame)
 
                 cue += [f_i] * of_frame
 
@@ -219,7 +216,7 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
 
     # Get a record to the context frequency for convenience
     context_freq = np.where(np.array(context) == 1,
-                            color_pct, motion_pct).astype(float) / 100
+                            color_freq, motion_freq).astype(float)
 
     # Construct a DataFrame with these schedules
     sched = pd.DataFrame(dict(trial_type=trial_type,
@@ -236,12 +233,12 @@ def condition_starter(n_trials, color_pct, frame_per_context, trial_probs):
                                   "context_freq"])
 
     # Check other constraints
-    for c_i, c_pct in enumerate([motion_pct, color_pct]):
-        assert (sched.context == c_i).mean() == c_pct / 100, fail
-    early_bal = sched.groupby("early").context.mean() * 100
-    assert map(int, early_bal.tolist()) == [color_pct, color_pct], fail
-    stim_bal = sched.groupby("stim").context.mean() * 100
-    assert map(int, stim_bal.tolist()) == [color_pct, color_pct], fail
+    for c_i, c_freq in enumerate([motion_freq, color_freq]):
+        assert np.allclose((sched.context == c_i).mean(), c_freq), fail
+    early_bal = sched.groupby("early").context.mean()
+    assert np.allclose(early_bal, [color_freq, color_freq]), fail
+    stim_bal = sched.groupby("stim").context.mean()
+    assert np.allclose(stim_bal, [color_freq, color_freq]), fail
     assert len(sched.groupby("context").cue.mean().unique()) == 1, fail
 
     return sched
@@ -271,10 +268,12 @@ def balance_switches(sched, tol=.01, random_state=None):
     if random_state is None:
         random_state = np.random.RandomState()
 
-    color_pct = int(sched.context_freq[sched.context == 1].unique()[0] * 100)
-    context_freqs = np.array([100 - color_pct, color_pct], float) / 100
-    desired = 1 - context_freqs
+    # Use integers for better subtraction performance
+    color_freq = np.array(sched.context_freq[sched.context == 1])[0]
+    context_freqs = np.array([1 - color_freq, color_freq])
+    desired = 1 - np.array(context_freqs)
 
+    # Shuffle until we get a good distribution of switches
     switch = pd.Series(np.ones(len(sched), bool))
     index = sched.index
     while True:
