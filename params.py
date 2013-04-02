@@ -1,7 +1,7 @@
 from __future__ import division
 # Base for everything that's
 # going to support data collection
-punch_base = dict(
+base = dict(
 
     experiment_name="punch",
 
@@ -101,10 +101,10 @@ behav_base = dict(
     n_designs=8,
 
 )
-behav_base.update(punch_base)
+behav_base.update(base)
 
 # Top-level paramters for behavioral experiment
-punch_behav = dict(
+behav = dict(
 
     monitor_name='mlw-mbair',
     cue_dur=(.85, 1),
@@ -115,10 +115,10 @@ punch_behav = dict(
     trials_bw_breaks=20,
 
 )
-punch_behav.update(behav_base)
+behav.update(behav_base)
 
 # Top-level parameters for training/staircase
-punch_train = dict(
+train = dict(
 
     monitor_name='mlw-mbair',
     log_base="data/%(subject)s_training",
@@ -140,7 +140,7 @@ punch_train = dict(
     fb_dur=1,
 
 )
-punch_train.update(punch_base)
+train.update(base)
 
-punch_demo = punch_train
-scan_design = punch_base
+demo = train
+scan_design = base

@@ -23,7 +23,7 @@ def main(arglist):
 
     # Get the experiment paramters
     mode = arglist.pop(0)
-    p = tools.Params("punch_%s" % mode)
+    p = tools.Params(mode)
     p.set_by_cmdline(arglist)
 
     # Assign the frame identities randomly over subjects
