@@ -51,13 +51,15 @@ def scan(p):
     schedule["run_trial"] = run_trial
 
     # Sort out the null event timing
+    schedule["iti"] = np.nan
     for run in schedule.run.unique():
-        sched = schedule[schedule.run == run]
+        run_index = schedule.run == run
+        sched = schedule[run_index]
         null_trs = p.trs_per_run - sched.trial_dur.sum()
         iti = trial_timing(p.iti_geom_param, p.max_iti,
                            null_trs, p.trials_per_run)
-        sched["iti"] = iti
-        total_trs = sched.iti.sum() + sched.trial_dur.sum()
+        schedule["iti"][run_index] = pd.Series(iti)
+        total_trs = iti.sum() + sched.trial_dur.sum()
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
 
     # Add in a condition-specific trial counter for convenience
