@@ -42,11 +42,13 @@ def scan(p):
         block_sched["block"] = i
         schedule.append(block_sched)
     schedule = pd.concat(schedule)
-    schedule.reset_index(inplace=True)
+    schedule.index = pd.Index(range(len(schedule)), name="trial")
 
     # Add in run information
     run = np.repeat(np.arange(p.n_runs), p.trials_per_run) + 1
     schedule["run"] = run
+    run_trial = np.tile(np.arange(p.trials_per_run), p.n_runs)
+    schedule["run_trial"] = run_trial
 
     # Sort out the null event timing
     for run in schedule.run.unique():
@@ -58,7 +60,10 @@ def scan(p):
         total_trs = sched.iti.sum() + sched.trial_dur.sum()
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
 
-    schedule.to_csv(p.schedule_file, index=False)
+    # Add in a condition-specific trial counter for convenience
+    # TODO
+
+    schedule.to_csv(p.design_file, index=False)
 
 
 def trial_timing(geom_param, max_iti, null_trs, n_trials):
@@ -278,7 +283,6 @@ def balance_switches(sched, tol=.01, random_state=None):
         if np.allclose(actual, desired, atol=tol):
             break
 
-    s_i.index = pd.Index(np.arange(len(s_i)), name="trial")
     return s_i
 
 
