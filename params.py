@@ -140,3 +140,4 @@ punch_train = dict(
 punch_train.update(punch_base)
 
 punch_demo = punch_train
+scan_design = punch_base
