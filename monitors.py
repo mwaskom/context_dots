@@ -39,6 +39,7 @@ mlw_mbair = dict(monitor_name='mlw-mbair',
                  width=30.5,
                  size=[1440, 900],
                  distance=63,
+
                  notes="")
 
 ben_octocore = dict(monitor_name='ben-octocore',

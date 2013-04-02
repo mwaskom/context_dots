@@ -9,7 +9,7 @@ punch_base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
-    window_color=0,
+    window_color=-1./3,
 
     # Fixation
     fix_size=.2,
@@ -19,7 +19,7 @@ punch_base = dict(
     fix_orient_dur=.5,
 
     # Frame
-    field_size=8,
+    field_size=7,
     frame_width=.5,
     frame_tex="sin",
     frame_per_context=2,
@@ -29,17 +29,20 @@ punch_base = dict(
     frame_patterns=["short", "long", "plaid", "plaid"],
 
     # Dots
-    dot_count=128,
+    dot_count=50,
     dot_shape="circle",
-    dot_speed=3,  # in degrees/sec
-    dot_size=.1,  # in degrees
-    dot_life_mean=60,  # in frames
-    dot_life_std=20,  # in frames
+    dot_speed=5,  # in degrees/sec
+    dot_size=.075,  # in degrees
     dot_dirs=[90, 270],
-    dot_colors=["yellow", "cyan"],
-    dot_hues=[.1667, .5],  # hue coordinates in hsv space
-    dot_sat=1,
-    dot_val=1,
+    dot_dir_names=["up", "down"],
+    dot_colors=[(0.9322632967794182, 0.5399103346267156, 0.2673547073386133),
+                (0., 0.740556230726851, 0.22775739356135855)],
+    dot_color_names=["red", "green"],
+    #dot_colors=[(0, 0, 0), (1, 1, 1)],
+    #dot_color_names=["black", "white"],
+    dot_hues=[0, 180],
+    dot_saturation=100,
+    dot_lightness=67,
 
     # Response settings
     quit_keys=["escape", "q"],
@@ -121,7 +124,7 @@ punch_train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=10,
+    n_per_block=4,
     full_coh_thresh=1,
     at_thresh_blocks=2,
     settle_slope=.1,
