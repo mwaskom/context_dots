@@ -88,6 +88,7 @@ punch_base = dict(
     max_iti=5,  # in TRs
     switch_tol=0.01,
     trial_trans_tol=0.1,
+    schedule_file="design/scan_schedule.csv",
 )
 
 # Base for behavioral design and collection

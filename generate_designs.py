@@ -35,28 +35,22 @@ def scan(p):
         sched_dict[freq] = sched_pair
 
     # Order the blocks into a full schedule for the experiment
-    full_schedule = []
+    schedule = []
     block_info = zip(p.color_freqs, p.block_duration)
     for i, (freq, dur) in enumerate(block_info):
         block_sched = sched_dict[freq][dur]
         block_sched["block"] = i
-        full_schedule.append(block_sched)
-    full_schedule = pd.concat(full_schedule)
+        schedule.append(block_sched)
+    schedule = pd.concat(schedule)
+    schedule.reset_index(inplace=True)
 
-    # Now split the full schedule into runs
-    all_trials = np.arange(len(full_schedule))
-    full_schedule.index = all_trials
-    run_indices = np.split(all_trials, p.n_runs)
-    run_schedules = []
-    for run_i in range(p.n_runs):
-        run_sched = full_schedule.ix[run_indices[run_i]]
-        run_trials = np.arange(p.trials_per_run)
-        run_sched.index = run_trials
-        run_sched["run"] = run_i + 1
-        run_schedules.append(run_sched)
+    # Add in run information
+    run = np.repeat(np.arange(p.n_runs), p.trials_per_run) + 1
+    schedule["run"] = run
 
     # Sort out the null event timing
-    for sched in run_schedules:
+    for run in schedule.run.unique():
+        sched = schedule[schedule.run == run]
         null_trs = p.trs_per_run - sched.trial_dur.sum()
         iti = trial_timing(p.iti_geom_param, p.max_iti,
                            null_trs, p.trials_per_run)
@@ -64,11 +58,11 @@ def scan(p):
         total_trs = sched.iti.sum() + sched.trial_dur.sum()
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
 
-    return run_schedules
+    schedule.to_csv(p.schedule_file, index=False)
 
 
 def trial_timing(geom_param, max_iti, null_trs, n_trials):
-
+    """Get a vector of ITI durations to fill in the null time of a run."""
     while True:
         candidates = np.random.geometric(geom_param, (100, n_trials))
         candidates[candidates > max_iti] = max_iti
@@ -284,7 +278,7 @@ def balance_switches(sched, tol=.01, random_state=None):
         if np.allclose(actual, desired, atol=tol):
             break
 
-    s_i.index = np.arange(len(s_i))
+    s_i.index = pd.Index(np.arange(len(s_i)), name="trial")
     return s_i
 
 
