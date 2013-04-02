@@ -74,18 +74,17 @@ punch_base = dict(
 
     # Design
     n_runs=12,
-    color_freqs=[.5, .35, .8, .65, .2, .65, .5, .8, .2, .35],
-    #color_freqs=[.5, 1/3, .8, 2/3, .2, 2/3, .5, .8, .2, 1/3],
+    color_freqs=[.5, 1/3, .8, 2/3, .2, 2/3, .5, .8, .2, 1/3],
     block_duration=[1, 0, 1, 0, 1, 1, 0, 0, 0, 1],
     block_division=(1 / 3, 2 / 3),
-    trials_per_condition=120,
-    trials_per_run=50,
+    trials_per_condition=180,
+    trials_per_run=75,
     trs_per_run=225,
     trial_probs=dict(later=1 / 3,
                      early=1 / 3,
                      catch=1 / 3),
     trial_durations=dict(later=1, early=2, catch=1),
-    iti_geom_param=0.3,
+    iti_geom_param=0.75,
     max_iti=5,  # in TRs
     switch_tol=0.01,
     trial_trans_tol=0.1,
