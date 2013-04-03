@@ -13,7 +13,7 @@ base = dict(
 
     # Fixation
     fix_size=.2,
-    fix_isi_color="black",
+    fix_iti_color="black",
     fix_stim_color="white",
     fix_shape="circle",
     fix_orient_dur=.5,
@@ -142,6 +142,15 @@ train = dict(
 )
 train.update(base)
 
+scan = dict(
+
+    tr=2.0,
+    cue_dur=(.8, 1),  # TODO
+    monitor_name="mlw-mbair",
+    log_base="data/%(subject)s_scan_run%(run)d",
+
+    )
+scan.update(base)
+
 demo = train
 scan_design = base
-scan = base

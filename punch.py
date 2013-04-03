@@ -38,7 +38,7 @@ def main(arglist):
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
                              mask=p.fix_shape, interpolate=True,
-                             color=p.fix_isi_color, size=p.fix_size)
+                             color=p.fix_iti_color, size=p.fix_size)
 
     instruct_text = dedent(p.instruct_text)
     instruct = tools.WaitText(win, instruct_text,
@@ -76,20 +76,16 @@ def main(arglist):
 # ====================
 
 
-def behav(p, win, stims):
-    """Behavioral experiment."""
+def scan(p, win, stims):
+    """Neuroimaging experiment."""
 
     # Max the screen brightness
     tools.max_brightness(p.monitor_name)
 
     # Get the design
-    d = tools.load_design_csv(p)
-    p.n_trials = len(d)
-
-    # Randomize for this execution
-    d["sorter"] = np.random.rand(p.n_trials)
-    d.sort("sorter", inplace=True)
-    d.index = range(p.n_trials)
+    d = pd.read_csv(p.design_file)
+    d = d[d.run == p.run]
+    d.set_index("run_trial", inplace=True)
 
     # Draw the instructions
     stims["instruct"].draw()
@@ -111,7 +107,7 @@ def behav(p, win, stims):
     log_cols = d_cols + ["frame_id", "cue_dur", "response", "rt",
                          "context_switch", "frame_switch",
                          "color_switch", "motion_switch",
-                         "correct", "isi", "onset_time", "dropped_frames"]
+                         "correct", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
     """
     log.dots = dict(mot_signal=stims["dots"].mot_signal,
@@ -124,7 +120,7 @@ def behav(p, win, stims):
     # Execute the experiment
     with tools.PresentationLoop(win, log, behav_exit):
         stim_event.clock.reset()
-        for t in xrange(p.n_trials):
+        for t in xrange(p.trials_per_run):
 
             # Get the info for this trial
             t_info = {k: d[k][t] for k in d_cols}
@@ -138,6 +134,8 @@ def behav(p, win, stims):
             early = bool(d.early[t])
             cue_dur = uniform(*p.cue_dur) if early else None
             t_info["cue_dur"] = cue_dur
+
+            stim = bool(d.stim[t])
 
             motion = d.motion[t]
             color = d.color[t]
@@ -156,26 +154,17 @@ def behav(p, win, stims):
                                           cue != d.cue[t - 1])
 
             # Pre-stim fixation
-            isi = uniform(*p.isi)
-            t_info["isi"] = isi
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(isi)
+            tools.wait_check_quit(d.iti[t] * p.tr)
 
             # The stimulus event actually happens here
             res = stim_event(context, motion, color,
-                             target, early, cue_dur)
+                             target, early, cue_dur, stim)
             t_info.update(res)
             log.add_data(t_info)
             #log.dots["dirs"][t] = stims["dots"].dirs
             #log.dots["hues"][t] = stims["dots"].hues
-
-            # Every n trials, let the subject take a quick break
-            if t and not t % p.trials_bw_breaks:
-                stims["break"].draw()
-                stims["fix"].draw()
-                win.flip()
-                tools.wait_check_quit(p.isi[1])
 
         stims["finish"].draw()
 
@@ -183,6 +172,7 @@ def behav(p, win, stims):
 def behav_exit(log):
     """Gets executed at the end of a behavioral run."""
     # Save the dot stimulus data to a npz archive
+    return
     dots_fname = log.fname.strip(".csv")
     np.savez(dots_fname, **log.dots)
 
@@ -190,10 +180,10 @@ def behav_exit(log):
     run_df = pd.read_csv(log.fname)
     if not len(run_df):
         return
-    print "Overall Accuracy: %.2f" % run_df.correct.mean()
-    print run_df.groupby("context").correct.mean()
-    print "Average RT: %.2f" % run_df.rt.mean()
-    print run_df.groupby("context").rt.mean()
+    print "Overall Accuracy: %.2f" % run_df.correct.dropna().mean()
+    print run_df.groupby("context").correct.dropna().mean()
+    print "Average RT: %.2f" % run_df.rt.dropna().mean()
+    print run_df.groupby("context").rt.dropna().mean()
 
 
 def train(p, win, stims):
@@ -433,7 +423,7 @@ class EventEngine(object):
         self.dots = stims["dots"]
         self.resp_keys = p.resp_keys
         self.fix_orient_dur = p.fix_orient_dur
-        self.fix_isi_color = p.fix_isi_color
+        self.fix_iti_color = p.fix_iti_color
         self.fix_stim_color = p.fix_stim_color
         self.clock = core.Clock()
         self.debug = p.debug
@@ -449,22 +439,24 @@ class EventEngine(object):
                                                height=0.5)]
 
     def __call__(self, context, motion, color, target,
-                 early=False, cue_dur=0, frame_with_orient=False):
+                 early=False, cue_dur=0, stim=True,
+                 frame_with_orient=False):
         """Executes the trial."""
 
         # Debugging information
-        if self.debug:
-            dir_name = self.p.dot_dir_names[motion]
-            color_name = self.p.dot_color_names[color]
+        if stim and self.debug:
+            dir_name = self.p.dot_dir_names[int(motion)]
+            color_name = self.p.dot_color_names[int(color)]
             msg1 = "Motion: %s   Color: %s" % (dir_name, color_name)
             self.debug_text[0].setText(msg1)
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
 
-        self.dots.direction = self.p.dot_dirs[motion]
-        self.dots.color = self.p.dot_colors[color]
-        self.dots.hue = self.p.dot_hues[color]
-        self.dots.new_array()
+        if stim:
+            self.dots.direction = self.p.dot_dirs[int(motion)]
+            self.dots.color = self.p.dot_colors[int(color)]
+            self.dots.hue = self.p.dot_hues[int(color)]
+            self.dots.new_array()
 
         # Orient cue
         self.fix.setColor(self.fix_stim_color)
@@ -481,35 +473,42 @@ class EventEngine(object):
             tools.wait_check_quit(cue_dur)
 
         # Main Stimulus Presentation
-        dropped_before = self.win.nDroppedFrames
-        event.clearEvents()
-        for frame in xrange(self.p.stim_dur * self.win.refresh_rate):
-            self.dots.draw()
-            self.frame.draw()
-            if self.debug:
-                for text in self.debug_text:
-                    text.draw()
-            self.win.flip()
-            if not frame:
-                resp_clock = core.Clock()
-                onset_time = self.clock.getTime()
-        dropped_after = self.win.nDroppedFrames
-        dropped_frames = dropped_after - dropped_before
+        if stim:
+            dropped_before = self.win.nDroppedFrames
+            event.clearEvents()
+            for frame in xrange(self.p.stim_dur * self.win.refresh_rate):
+                self.dots.draw()
+                self.frame.draw()
+                if self.debug:
+                    for text in self.debug_text:
+                        text.draw()
+                self.win.flip()
+                if not frame:
+                    resp_clock = core.Clock()
+                    onset_time = self.clock.getTime()
+            dropped_after = self.win.nDroppedFrames
+            dropped_frames = dropped_after - dropped_before
 
-        # Response Collection
-        response = None
-        correct = False
-        rt = np.nan
-        keys = event.getKeys(timeStamped=resp_clock)
-        for key, stamp in keys:
-            if key in self.p.quit_keys:
-                print "Subject quit execution"
-                core.quit()
-            elif key in self.resp_keys:
-                response = self.resp_keys.index(key)
-                rt = stamp
-                if response == target:
-                    correct = True
+            # Response Collection
+            response = None
+            correct = False
+            rt = np.nan
+            keys = event.getKeys(timeStamped=resp_clock)
+            for key, stamp in keys:
+                if key in self.p.quit_keys:
+                    print "Subject quit execution"
+                    core.quit()
+                elif key in self.resp_keys:
+                    response = self.resp_keys.index(key)
+                    rt = stamp
+                    if response == target:
+                        correct = True
+        else:
+            dropped_frames=np.nan
+            onset_time = np.nan
+            response = np.nan
+            correct = np.nan
+            rt = np.nan
 
         # Feedback
         if self.feedback and not correct:
@@ -522,7 +521,7 @@ class EventEngine(object):
             self.frame.reset_phase()
 
         # Reset fixation color
-        self.fix.setColor(self.fix_isi_color)
+        self.fix.setColor(self.fix_iti_color)
 
         result = dict(correct=correct, rt=rt, response=response,
                       onset_time=onset_time, dropped_frames=dropped_frames)
