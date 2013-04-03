@@ -109,13 +109,6 @@ def scan(p, win, stims):
                          "color_switch", "motion_switch",
                          "correct", "onset_time", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
-    """
-    log.dots = dict(mot_signal=stims["dots"].mot_signal,
-                    col_signal=stims["dots"].col_signal,
-                    dirs=np.zeros((p.n_trials, p.dot_count)),
-                    hues=np.zeros((p.n_trials, p.dot_count)))
-    """
-    log.dots = dict()  # TODO
 
     # Execute the experiment
     with tools.PresentationLoop(win, log, behav_exit):
@@ -163,8 +156,6 @@ def scan(p, win, stims):
                              target, early, cue_dur, stim)
             t_info.update(res)
             log.add_data(t_info)
-            #log.dots["dirs"][t] = stims["dots"].dirs
-            #log.dots["hues"][t] = stims["dots"].hues
 
         stims["finish"].draw()
 
@@ -174,7 +165,7 @@ def behav_exit(log):
     # Save the dot stimulus data to a npz archive
     return
     dots_fname = log.fname.strip(".csv")
-    np.savez(dots_fname, **log.dots)
+    np.savez(dots_fname)
 
     # Read in the data file and print some performance information
     run_df = pd.read_csv(log.fname)
@@ -504,7 +495,7 @@ class EventEngine(object):
                     if response == target:
                         correct = True
         else:
-            dropped_frames=np.nan
+            dropped_frames = np.nan
             onset_time = np.nan
             response = np.nan
             correct = np.nan
