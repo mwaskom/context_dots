@@ -10,7 +10,6 @@ import json
 import itertools
 from string import letters
 from textwrap import dedent
-from husl import husl_to_rgb
 import pandas as pd
 import numpy as np
 from numpy.random import randint, uniform
@@ -702,18 +701,6 @@ class Dots(object):
         noise_colors = (np.random.uniform(size=noise.sum()) < 0.5).astype(int)
         rgb[noise] = self.colors[noise_colors]
         rgb = rgb * 2 - 1
-        self.dots.setColors(rgb)
-
-    def _update_colors_off(self):
-        """Set dot colors using the stored coherence value."""
-        signal = np.random.uniform(size=self.ndots) < self.color_coherence
-        hues = np.random.randint(360, size=self.ndots).astype(float)
-        hues[signal] = self.hue
-        s = float(self.saturation)
-        l = float(self.lightness)
-        rgb = np.array([husl_to_rgb(h, s, l) for h in hues])
-        rgb[rgb < 0] = 0
-        rgb[rgb > 1] = 1
         self.dots.setColors(rgb)
 
     def _wrap_around(self, dots):
