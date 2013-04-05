@@ -141,6 +141,15 @@ def condition_schedule(p, color_freq):
         if cost < p.trial_trans_tol:
             break
 
+    # Establish the cue duration, either as uniform params or a constant
+    try:
+        a, b = p.cue_dur
+        cue_dur = p.random_state.uniform(a, b, n_trials)
+    except TypeError:
+        cue_dur =  p.cue_dur
+    sched["cue_dur"] = cue_dur
+    sched.cue_dur[sched.trial_type == "catch"] = np.nan
+
     # Get a record of how long each trial will take
     sched["trial_dur"] = np.nan
     for type, dur in p.trial_durations.iteritems():

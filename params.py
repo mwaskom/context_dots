@@ -140,7 +140,8 @@ train.update(base)
 scan = dict(
 
     tr=2.0,
-    cue_dur=(.8, 1),  # TODO
+    #cue_dur=(.8, 1),  # TODO
+    cue_dur=1.5,
     monitor_name="mlw-mbair",
     log_base="data/%(subject)s_scan_run%(run)d",
 

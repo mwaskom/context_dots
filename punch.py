@@ -127,7 +127,7 @@ def scan(p, win, stims):
             t_info["frame_id"] = frame_id
 
             early = bool(d.early[t])
-            cue_dur = uniform(*p.cue_dur) if early else None
+            cue_dur = d.cue_dur[t]
             t_info["cue_dur"] = cue_dur
 
             stim = bool(d.stim[t])
