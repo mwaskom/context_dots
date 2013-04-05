@@ -35,14 +35,9 @@ base = dict(
     dot_size=.075,  # in degrees
     dot_dirs=[90, 270],
     dot_dir_names=["up", "down"],
-    dot_colors=[(0.9322632967794182, 0.5399103346267156, 0.2673547073386133),
-                (0., 0.740556230726851, 0.22775739356135855)],
+    dot_colors=[(0.93226, 0.53991, 0.26735),
+                (0., 0.74055, 0.22775)],
     dot_color_names=["red", "green"],
-    #dot_colors=[(0, 0, 0), (1, 1, 1)],
-    #dot_color_names=["black", "white"],
-    dot_hues=[0, 180],
-    dot_saturation=100,
-    dot_lightness=67,
 
     # Response settings
     quit_keys=["escape", "q"],
