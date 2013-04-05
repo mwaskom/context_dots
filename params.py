@@ -149,4 +149,4 @@ scan = dict(
 scan.update(base)
 
 demo = train
-scan_design = base
+scan_design = scan
