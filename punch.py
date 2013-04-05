@@ -120,7 +120,6 @@ def scan(p, win, stims):
             context = d.context[t]
             cue = d.cue[t]
             frame_id = p.frame_ids[context][cue]
-            stims["frame"].make_active(frame_id)
             t_info["frame_id"] = frame_id
 
             early = bool(d.early[t])
@@ -151,7 +150,7 @@ def scan(p, win, stims):
             tools.wait_check_quit(d.iti[t] * p.tr)
 
             # The stimulus event actually happens here
-            res = stim_event(context, motion, color,
+            res = stim_event(context, cue, motion, color,
                              target, early, cue_dur, stim)
             t_info.update(res)
             log.add_data(t_info)
@@ -226,7 +225,6 @@ def train(p, win, stims):
             if not context:
                 cue = (cue + 1) % p.frame_per_context
             frame_id = p.frame_ids[context][cue]
-            stims["frame"].make_active(frame_id)
             mot_coh, col_coh = coherences
             dots.motion_coherence = mot_coh
             dots.color_coherence = col_coh
@@ -255,7 +253,7 @@ def train(p, win, stims):
                 t_info.update(block_info)
 
                 # Stimulus event happens here
-                res = stim_event(context, motion, color, target,
+                res = stim_event(context, cue, motion, color, target,
                                  frame_with_orient=True)
                 t_info.update(res)
                 log.add_data(t_info)
@@ -415,6 +413,7 @@ class EventEngine(object):
         self.fix_orient_dur = p.fix_orient_dur
         self.fix_iti_color = p.fix_iti_color
         self.fix_stim_color = p.fix_stim_color
+        self.frame_ids = p.frame_ids
         self.clock = core.Clock()
         self.debug = p.debug
         if feedback:
@@ -428,7 +427,7 @@ class EventEngine(object):
                                                pos=(0.0, 5.0),
                                                height=0.5)]
 
-    def __call__(self, context, motion, color, target,
+    def __call__(self, context, cue, motion, color, target,
                  early=False, cue_dur=0, stim=True,
                  frame_with_orient=False):
         """Executes the trial."""
@@ -441,6 +440,9 @@ class EventEngine(object):
             self.debug_text[0].setText(msg1)
             msg2 = ["motion", "color"][context]
             self.debug_text[1].setText(msg2)
+
+        # Set the appropriate frame
+        self.frame.make_active(self.frame_ids[context][cue])
 
         if stim:
             self.dots.direction = self.p.dot_dirs[int(motion)]
@@ -666,6 +668,8 @@ class Dots(object):
                 break
 
         self._xys = xys.transpose(2, 1, 0)
+        self.motion_signals = []
+        self.color_signals = []
 
     def _update_positions(self):
         """Move some dots in one direction and redraw others randomly."""
@@ -673,6 +677,7 @@ class Dots(object):
 
         # This is how we get an average coherence with random signal
         signal = np.random.uniform(size=self.ndots) < self.motion_coherence
+        self.motion_signals.append(signal.mean())
 
         # Update the positions of the signal dots
         dir = np.deg2rad(self.direction)
@@ -694,6 +699,7 @@ class Dots(object):
     def _update_colors(self):
         """Set dot colors using the stored coherence value."""
         signal = np.random.uniform(size=self.ndots) < self.color_coherence
+        self.color_signals.append(signal.mean())
         rgb = np.zeros((self.ndots, 3))
         rgb[signal] = self.color
 
