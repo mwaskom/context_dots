@@ -30,7 +30,7 @@ base = dict(
 
     # Dots
     dot_count=50,
-    dot_shape="circle",
+    dot_shape="square",
     dot_speed=5,  # in degrees/sec
     dot_size=.075,  # in degrees
     dot_dirs=[90, 270],

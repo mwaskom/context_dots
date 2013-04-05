@@ -97,16 +97,20 @@ def scan(p, win, stims):
     with open(coh_file) as fid:
         coherences = json.load(fid)
     p.__dict__.update(coherences)
-    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in ["mot", "col"]]
+    contexts = ["mot", "col"]
+    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in contexts]
     stims["dots"].motion_coherence = mot_coh
     stims["dots"].color_coherence = col_coh
 
     # Set up the log files
     d_cols = list(d.columns)
-    log_cols = d_cols + ["frame_id", "cue_dur", "response", "rt",
+    log_cols = d_cols + ["frame_id", "cue_dur",
                          "context_switch", "frame_switch",
-                         "color_switch", "motion_switch",
-                         "correct", "onset_time", "dropped_frames"]
+                         "motion_switch", "color_switch",
+                         "motion_signal", "color_signal",
+                         "cue_onset", "stim_onset",
+                         "response", "rt", "correct",
+                         "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
     # Execute the experiment
@@ -447,7 +451,6 @@ class EventEngine(object):
         if stim:
             self.dots.direction = self.p.dot_dirs[int(motion)]
             self.dots.color = self.p.dot_colors[int(color)]
-            self.dots.hue = self.p.dot_hues[int(color)]
             self.dots.new_array()
 
         # Orient cue
@@ -462,7 +465,10 @@ class EventEngine(object):
         if early:
             self.frame.draw()
             self.win.flip()
+            cue_onset_time = self.clock.getTime()
             tools.wait_check_quit(cue_dur)
+        else:
+            cue_onset_time = np.nan
 
         # Main Stimulus Presentation
         if stim:
@@ -477,7 +483,7 @@ class EventEngine(object):
                 self.win.flip()
                 if not frame:
                     resp_clock = core.Clock()
-                    onset_time = self.clock.getTime()
+                    stim_onset_time = self.clock.getTime()
             dropped_after = self.win.nDroppedFrames
             dropped_frames = dropped_after - dropped_before
 
@@ -497,7 +503,7 @@ class EventEngine(object):
                         correct = True
         else:
             dropped_frames = np.nan
-            onset_time = np.nan
+            stim_onset_time = np.nan
             response = np.nan
             correct = np.nan
             rt = np.nan
@@ -516,7 +522,9 @@ class EventEngine(object):
         self.fix.setColor(self.fix_iti_color)
 
         result = dict(correct=correct, rt=rt, response=response,
-                      onset_time=onset_time, dropped_frames=dropped_frames)
+                      cue_onset=cue_onset_time,
+                      stim_onset=stim_onset_time,
+                      dropped_frames=dropped_frames)
 
         return result
 
@@ -631,8 +639,6 @@ class Dots(object):
         self.ndots = p.dot_count
         self.speed = p.dot_speed / win.refresh_rate
         self.colors = np.array(p.dot_colors)
-        self.saturation = p.dot_saturation
-        self.lightness = p.dot_lightness
         self.field_size = p.field_size - p.frame_width
 
         # Initialize the Psychopy object
