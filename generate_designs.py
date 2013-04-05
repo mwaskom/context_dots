@@ -3,6 +3,7 @@ from __future__ import division
 import sys
 import pandas as pd
 import numpy as np
+from scipy import stats
 import tools
 import moss
 
@@ -54,24 +55,38 @@ def scan(p):
     schedule["iti"] = np.nan
     for run in schedule.run.unique():
         run_index = schedule.run == run
-        sched = schedule[run_index]
-        null_trs = p.trs_per_run - sched.trial_dur.sum()
-        iti = trial_timing(p.iti_geom_param, p.max_iti,
-                           null_trs, p.trials_per_run)
-        schedule["iti"][run_index] = pd.Series(iti)
-        total_trs = iti.sum() + sched.trial_dur.sum()
+        sched_i = schedule[run_index]
+        null_trs = p.trs_per_run - sched_i.trial_dur.sum()
+        iti = trial_timing(p, null_trs)
+        schedule.iti[run_index] = pd.Series(iti, index=sched_i.index)
+        total_trs = iti.sum() + sched_i.trial_dur.sum()
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
 
-    # Add in a condition-specific trial counter for convenience
-    # TODO
+    # Get a record of the trial index from a condition perspective
+    condition_trial = np.empty(len(schedule), int)
+    for condition in schedule.color_freq.unique():
+        trials = schedule.color_freq == condition
+        condition_trial[trials] = range(p.trials_per_condition)
+    schedule["condition_trial"] = condition_trial
+
+    # Assertion tests for schedule construction
+    assert not schedule.early[schedule.trial_type == "later"].any()
+    assert schedule.stim[schedule.trial_type == "later"].all()
+    assert schedule.early[schedule.trial_type == "early"].all()
+    assert schedule.stim[schedule.trial_type == "early"].all()
+    assert schedule.early[schedule.trial_type == "catch"].all()
+    assert not schedule.stim[schedule.trial_type == "catch"].any()
 
     schedule.to_csv(p.design_file, index=False)
 
 
-def trial_timing(geom_param, max_iti, null_trs, n_trials):
+def trial_timing(p, null_trs):
     """Get a vector of ITI durations to fill in the null time of a run."""
+    geom_param = p.iti_geom_param
+    max_iti = p.max_iti
+    n_trials = p.trials_per_run
     while True:
-        candidates = np.random.geometric(geom_param, (100, n_trials))
+        candidates = p.random_state.geometric(geom_param, (100, n_trials))
         candidates[candidates > max_iti] = max_iti
         right_length = candidates.sum(axis=1) == null_trs
         if not any(right_length):
@@ -130,6 +145,26 @@ def condition_schedule(p, color_freq):
     sched["trial_dur"] = np.nan
     for type, dur in p.trial_durations.iteritems():
         sched.trial_dur[sched.trial_type == type] = dur
+
+    # Boolean masks corresponding to contexts
+    motion_trials = sched.context == 0
+    color_trials = sched.context == 1
+
+    # Get a record of color task frequency as a condition identifier
+    sched["color_freq"] = sched["context_freq"]
+    sched.color_freq[color_trials] = 1 - sched.context_freq[color_trials]
+
+    # Get a record of context entropy
+    sched["context_entropy"] = stats.entropy([sched.context_freq,
+                                              1 - sched.context_freq])
+
+    # Get a record of congruency
+    sched["congruent"] = sched.motion == sched.color
+
+    # Get a record of the correct response
+    sched["correct_response"] = np.nan
+    sched.correct_response[motion_trials] = sched.motion[motion_trials]
+    sched.correct_response[color_trials] = sched.color[color_trials]
 
     return sched
 

@@ -87,7 +87,7 @@ base = dict(
                      early=1 / 3,
                      catch=1 / 3),
     trial_durations=dict(later=1, early=2, catch=1),
-    iti_geom_param=0.75,
+    iti_geom_param=0.5,
     max_iti=5,  # in TRs
     switch_tol=0.01,
     trial_trans_tol=0.1,
