@@ -148,7 +148,7 @@ def condition_schedule(p, color_freq):
     except TypeError:
         cue_dur =  p.cue_dur
     sched["cue_dur"] = cue_dur
-    sched.cue_dur[sched.trial_type == "catch"] = np.nan
+    sched.cue_dur[sched.trial_type == "later"] = np.nan
 
     # Get a record of how long each trial will take
     sched["trial_dur"] = np.nan
