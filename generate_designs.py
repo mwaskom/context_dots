@@ -203,9 +203,9 @@ def condition_schedule(p, color_freq):
     sched["congruent"] = sched.motion == sched.color
 
     # Get a record of the correct response
-    sched["correct_response"] = np.nan
-    sched.correct_response[motion_trials] = sched.motion[motion_trials]
-    sched.correct_response[color_trials] = sched.color[color_trials]
+    sched["target"] = np.nan
+    sched.target[motion_trials] = sched.motion[motion_trials]
+    sched.target[color_trials] = sched.color[color_trials]
 
     return sched
 

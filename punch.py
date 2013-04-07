@@ -82,9 +82,8 @@ def scan(p, win, stims):
     tools.max_brightness(p.monitor_name)
 
     # Get the design
-    d = pd.read_csv(p.design_file)
-    d = d[d.run == p.run]
-    d.set_index("run_trial", inplace=True)
+    design = pd.read_csv(p.design_file)
+    design = design[design.run == p.run].set_index("run_trial")
 
     # Draw the instructions
     stims["instruct"].draw()
@@ -103,10 +102,8 @@ def scan(p, win, stims):
     stims["dots"].color_coherence = col_coh
 
     # Set up the log files
-    d_cols = list(d.columns)
+    d_cols = list(design.columns)
     log_cols = d_cols + ["frame_id", "cue_dur",
-                         "context_switch", "frame_switch",
-                         "motion_switch", "color_switch",
                          "motion_signal", "color_signal",
                          "cue_onset", "stim_onset",
                          "response", "rt", "correct",
@@ -116,47 +113,18 @@ def scan(p, win, stims):
     # Execute the experiment
     with tools.PresentationLoop(win, log, behav_exit):
         stim_event.clock.reset()
-        for t in xrange(p.trials_per_run):
+        for t, t_info in design.iterrows():
 
-            # Get the info for this trial
-            t_info = {k: d[k][t] for k in d_cols}
-
-            context = d.context[t]
-            cue = d.cue[t]
-            frame_id = p.frame_ids[context][cue]
-            t_info["frame_id"] = frame_id
-
-            early = bool(d.early[t])
-            cue_dur = d.cue_dur[t]
-            t_info["cue_dur"] = cue_dur
-
-            stim = bool(d.stim[t])
-
-            motion = d.motion[t]
-            color = d.color[t]
-            target = [motion, color][context]
-
-            # Figure out if switches have happened and log
-            if not t:
-                t_info.update(
-                    {"%s_switch" % k: True for k in ["context", "frame",
-                                                     "motion", "color"]})
-            else:
-                t_info["context_switch"] = context != d.context[t - 1]
-                t_info["motion_switch"] = motion != d.motion[t - 1]
-                t_info["color_switch"] = color != d.color[t - 1]
-                t_info["frame_switch"] = (context != d.context[t - 1] or
-                                          cue != d.cue[t - 1])
-
-            # Pre-stim fixation
+            # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(d.iti[t] * p.tr)
+            tools.wait_check_quit(t_info["iti"] * p.tr)
 
-            # The stimulus event actually happens here
-            res = stim_event(context, cue, motion, color,
-                             target, early, cue_dur, stim)
-            t_info.update(res)
+            # Stimulus Event
+            stim_info = t_info[["context", "cue", "motion", "color",
+                                "target", "early", "cue_dur", "stim"]]
+            res = stim_event(**stim_info)
+            t_info = t_info.append(pd.Series(res))
             log.add_data(t_info)
 
         stims["finish"].draw()
@@ -446,7 +414,8 @@ class EventEngine(object):
             self.debug_text[1].setText(msg2)
 
         # Set the appropriate frame
-        self.frame.make_active(self.frame_ids[context][cue])
+        frame_id = self.frame_ids[context][cue]
+        self.frame.make_active(frame_id)
 
         if stim:
             self.dots.direction = self.p.dot_dirs[int(motion)]
@@ -521,7 +490,10 @@ class EventEngine(object):
         # Reset fixation color
         self.fix.setColor(self.fix_iti_color)
 
-        result = dict(correct=correct, rt=rt, response=response,
+        # Return event information back to the caller
+        result = dict(correct=correct, rt=rt,
+                      response=response,
+                      frame_id=frame_id,
                       cue_onset=cue_onset_time,
                       stim_onset=stim_onset_time,
                       dropped_frames=dropped_frames)
