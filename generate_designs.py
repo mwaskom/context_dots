@@ -69,6 +69,38 @@ def scan(p):
         condition_trial[trials] = range(p.trials_per_condition)
     schedule["condition_trial"] = condition_trial
 
+    # Record switch information
+    context_switch = np.zeros(len(schedule))
+    context_switch[1:] = schedule.context[1:] != schedule.context[:-1]
+    context_switch[schedule.run_trial == 0] = False
+
+    frame_switch = np.zeros(len(schedule))
+    frame_switch[1:] = ((schedule.context[1:] != schedule.context[:-1]) |
+                        (schedule.cue[1:] != schedule.cue[:-1]))
+    frame_switch[schedule.run_trial == 0] = False
+
+    stim = np.array(schedule.stim)
+    motion = schedule.motion[stim]
+    motion_switch_ = np.zeros(stim.sum())
+    motion_switch_[1:] = motion[1:] != motion[:-1]
+    motion_switch_[schedule.run_trial[stim] == 0] = False
+    motion_switch = np.zeros(len(schedule), bool)
+    motion_switch[stim] = motion_switch_.astype(bool)
+
+    color = schedule.color[stim]
+    color_switch_ = np.zeros(stim.sum())
+    color_switch_[1:] = color[1:] != color[:-1]
+    color_switch_[schedule.run_trial[stim] == 0] = False
+    color_switch = np.zeros(len(schedule), bool)
+    color_switch[stim] = color_switch_.astype(bool)
+
+    switches = pd.DataFrame(dict(context_switch=context_switch,
+                                 motion_switch=motion_switch,
+                                 color_switch=color_switch,
+                                 frame_switch=frame_switch),
+                            index=schedule.index)
+    schedule = schedule.join(switches, how="outer")
+
     # Assertion tests for schedule construction
     assert not schedule.early[schedule.trial_type == "later"].any()
     assert schedule.stim[schedule.trial_type == "later"].all()
@@ -146,7 +178,7 @@ def condition_schedule(p, color_freq):
         a, b = p.cue_dur
         cue_dur = p.random_state.uniform(a, b, n_trials)
     except TypeError:
-        cue_dur =  p.cue_dur
+        cue_dur = p.cue_dur
     sched["cue_dur"] = cue_dur
     sched.cue_dur[sched.trial_type == "later"] = np.nan
 
@@ -319,7 +351,7 @@ def balance_switches(sched, tol=.01, random_state=None):
     desired = 1 - np.array(context_freqs)
 
     # Shuffle until we get a good distribution of switches
-    switch = pd.Series(np.ones(len(sched), bool))
+    switch = pd.Series(np.zeros(len(sched), bool))
     index = sched.index
     while True:
         s_i = sched.reindex(random_state.permutation(index))
