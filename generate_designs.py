@@ -53,14 +53,21 @@ def scan(p):
 
     # Sort out the null event timing
     schedule["iti"] = np.nan
+    schedule["cue_onset_assign"] = np.nan
     for run in schedule.run.unique():
         run_index = schedule.run == run
         sched_i = schedule[run_index]
-        null_trs = p.trs_per_run - sched_i.trial_dur.sum()
-        iti = trial_timing(p, null_trs)
+        secs_per_run = p.trs_per_run * p.tr
+        null_time = secs_per_run - sched_i.trial_dur.sum()
+        iti = trial_timing(p, null_time)
         schedule.iti[run_index] = pd.Series(iti, index=sched_i.index)
-        total_trs = iti.sum() + sched_i.trial_dur.sum()
+        total_trs = (iti.sum() + sched_i.trial_dur.sum()) / p.tr
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
+
+        # Schedule the start of each trial (cue onset)
+        trial_dur = sched_i.trial_dur + iti
+        cue_onset_assign = trial_dur.cumsum() - sched_i.trial_dur
+        schedule.cue_onset_assign[run_index] = cue_onset_assign
 
     # Get a record of the trial index from a condition perspective
     condition_trial = np.empty(len(schedule), int)
@@ -103,28 +110,35 @@ def scan(p):
     schedule = schedule.join(switches, how="outer")
 
     # Assertion tests for schedule construction
-    assert not schedule.early[schedule.trial_type == "later"].any()
-    assert schedule.stim[schedule.trial_type == "later"].all()
-    assert schedule.early[schedule.trial_type == "early"].all()
-    assert schedule.stim[schedule.trial_type == "early"].all()
-    assert schedule.early[schedule.trial_type == "catch"].all()
-    assert not schedule.stim[schedule.trial_type == "catch"].any()
+    fail = "Something's gone wrong"
+    assert not schedule.early[schedule.trial_type == "later"].any(), fail
+    assert schedule.stim[schedule.trial_type == "later"].all(), fail
+    assert schedule.early[schedule.trial_type == "early"].all(), fail
+    assert schedule.stim[schedule.trial_type == "early"].all(), fail
+    assert schedule.early[schedule.trial_type == "catch"].all(), fail
+    assert not schedule.stim[schedule.trial_type == "catch"].any(), fail
 
     schedule.to_csv(p.design_file, index=False)
 
 
-def trial_timing(p, null_trs):
+def trial_timing(p, null_time):
     """Get a vector of ITI durations to fill in the null time of a run."""
     geom_param = p.iti_geom_param
     max_iti = p.max_iti
     n_trials = p.trials_per_run
     while True:
         candidates = p.random_state.geometric(geom_param, (100, n_trials))
-        candidates[candidates > max_iti] = max_iti
-        right_length = candidates.sum(axis=1) == null_trs
+        candidates += p.iti_geom_loc
+        too_long = candidates > max_iti
+        while too_long.any():
+            candidates[too_long] = p.random_state.geometric(geom_param,
+                                                            too_long.sum())
+            too_long = candidates > max_iti
+        right_length = candidates.sum(axis=1) == null_time
         if not any(right_length):
             continue
         else:
+            assert np.all(candidates <= max_iti), "Something's gone wrong"
             return candidates[right_length][0]
 
 
@@ -184,11 +198,12 @@ def condition_schedule(p, color_freq):
     sched.cue_dur[sched.trial_type == "later"] = np.nan
 
     # Get a record of how long each trial will take
-    sched["trial_dur"] = np.nan
-    for type, dur in p.trial_durations.iteritems():
-        sched.trial_dur[sched.trial_type == type] = dur
+    trial_durations = dict(later=p.stim_dur,
+                           early=p.cue_dur + p.stim_dur,
+                           catch=p.cue_dur)
+    sched["trial_dur"] = sched.trial_type.map(trial_durations)
 
-    # Boolean masks corresponding to contexts
+    # Boolean masks corresponding to contexts (useful for code below)
     motion_trials = sched.context == 0
     color_trials = sched.context == 1
 
@@ -250,7 +265,7 @@ def condition_starter(n_trials, color_freq, frame_per_context, trial_probs):
     motion_freq = 1 - color_freq
 
     # Fail message
-    fail = "Failed to balance design"
+    fail = "Something's gone wrong"
 
     for type, t_prob in trial_probs.iteritems():
         of_type = t_prob * n_trials

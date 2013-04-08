@@ -78,12 +78,12 @@ base = dict(
     trials_per_condition=180,
     trials_per_run=75,
     trs_per_run=225,
-    trial_probs=dict(later=1 / 3,
-                     early=1 / 3,
-                     catch=1 / 3),
-    trial_durations=dict(later=1, early=2, catch=1),
-    iti_geom_param=0.5,
-    max_iti=5,  # in TRs
+    trial_probs=dict(later=1/3,
+                     early=1/3,
+                     catch=1/3),
+    iti_geom_param=1/3,
+    iti_geom_loc=1,
+    max_iti=10,  # in seconds
     switch_tol=0.01,
     trial_trans_tol=0.1,
     design_file="design/scan_design.csv",
@@ -140,8 +140,7 @@ train.update(base)
 scan = dict(
 
     tr=2.0,
-    #cue_dur=(.8, 1),  # TODO
-    cue_dur=1.5,
+    cue_dur=1.0,
     monitor_name="mlw-mbair",
     log_base="data/%(subject)s_scan_run%(run)d",
 

@@ -103,7 +103,7 @@ def scan(p, win, stims):
 
     # Set up the log file
     d_cols = list(design.columns)
-    log_cols = d_cols + ["frame_id", "assign_cue_onset",
+    log_cols = d_cols + ["frame_id",
                          "cue_onset", "stim_onset",
                          "response", "rt", "correct",
                          "motion_signal", "color_signal",
@@ -113,30 +113,15 @@ def scan(p, win, stims):
     # Execute the experiment
     with tools.PresentationLoop(win, log, scan_exit):
         stim_event.clock.reset()
-        running_time = 0
         for t, t_info in design.iterrows():
-
-            # Sort out timing for this trial
-            iti_secs = t_info["iti"] * p.tr
-            if t_info["trial_type"] == "later":
-                iti_secs -= p.fix_orient_dur
-            orient_onset = running_time + iti_secs
-            cue_onset = orient_onset + p.fix_orient_dur
-            cue_info = pd.Series(dict(cue_onset_assign=cue_onset))
-            t_info = t_info.append(cue_info)
-
-            running_time += iti_secs + p.fix_orient_dur
-            if t_info["early"]:
-                running_time += p.cue_dur
-            if t_info["stim"]:
-                running_time += p.stim_dur
 
             # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(iti_secs - 1)
+            tools.wait_check_quit(t_info["iti"] - 1)
+            onset_time = t_info["cue_onset_assign"] - p.fix_orient_dur
             tools.precise_wait(win, stim_event.clock,
-                               orient_onset, stims["fix"])
+                               onset_time, stims["fix"])
 
             # Stimulus Event
             stim_info = t_info[["context", "cue", "motion", "color",
@@ -155,9 +140,10 @@ def scan_exit(log):
         return
     print "Overall Accuracy: %.2f" % df.correct.dropna().mean()
     print df.groupby("context").correct.dropna().mean()
-    print "Average RT: %.2f" % df.rt.dropna().mean()
-    print df.groupby("context").rt.dropna().mean()
-    diff = (df.assign_cue_onset - df.cue_onset).abs().mean()
+    if df.rt.notnull().any():
+        print "Average RT: %.2f" % df.rt.dropna().mean()
+        print df.groupby("context").rt.dropna().mean()
+    diff = (df.cue_onset_assign - df.cue_onset).abs().mean()
     if  diff > .1:
         print "Detected issues with cue timing (diff = %.3f)" % diff
 
