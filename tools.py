@@ -275,10 +275,10 @@ def wait_for_trigger(win, params):
     event.clearEvents()
 
 
-def precise_wait(win, clock, end_time, stim, refresh_rate=60):
+def precise_wait(win, clock, end_time, stim):
     """Wait with precision controlled by screen refreshes."""
     wait_time = end_time - clock.getTime()
-    wait_flips = int(wait_time * refresh_rate)
+    wait_flips = int(wait_time * win.refresh_rate)
     for frame in xrange(wait_flips):
         stim.draw()
         win.flip()

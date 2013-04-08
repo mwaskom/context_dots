@@ -69,7 +69,8 @@ def scan(p):
         condition_trial[trials] = range(p.trials_per_condition)
     schedule["condition_trial"] = condition_trial
 
-    # Record switch information
+    # Record switch information (this is annoiyng to do)
+    # For the feature switches, we pretend like the catch trials don't exist
     context_switch = np.zeros(len(schedule))
     context_switch[1:] = schedule.context[1:] != schedule.context[:-1]
     context_switch[schedule.run_trial == 0] = False

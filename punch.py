@@ -101,24 +101,42 @@ def scan(p, win, stims):
     stims["dots"].motion_coherence = mot_coh
     stims["dots"].color_coherence = col_coh
 
-    # Set up the log files
+    # Set up the log file
     d_cols = list(design.columns)
-    log_cols = d_cols + ["frame_id", "cue_dur",
-                         "motion_signal", "color_signal",
+    log_cols = d_cols + ["frame_id", "assign_cue_onset",
                          "cue_onset", "stim_onset",
                          "response", "rt", "correct",
+                         "motion_signal", "color_signal",
                          "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
     # Execute the experiment
-    with tools.PresentationLoop(win, log, behav_exit):
+    with tools.PresentationLoop(win, log, scan_exit):
         stim_event.clock.reset()
+        running_time = 0
         for t, t_info in design.iterrows():
+
+            # Sort out timing for this trial
+            iti_secs = t_info["iti"] * p.tr
+            if t_info["trial_type"] == "later":
+                iti_secs -= p.fix_orient_dur
+            orient_onset = running_time + iti_secs
+            cue_onset = orient_onset + p.fix_orient_dur
+            cue_info = pd.Series(dict(cue_onset_assign=cue_onset))
+            t_info = t_info.append(cue_info)
+
+            running_time += iti_secs + p.fix_orient_dur
+            if t_info["early"]:
+                running_time += p.cue_dur
+            if t_info["stim"]:
+                running_time += p.stim_dur
 
             # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(t_info["iti"] * p.tr)
+            tools.wait_check_quit(iti_secs - 1)
+            tools.precise_wait(win, stim_event.clock,
+                               orient_onset, stims["fix"])
 
             # Stimulus Event
             stim_info = t_info[["context", "cue", "motion", "color",
@@ -130,21 +148,18 @@ def scan(p, win, stims):
         stims["finish"].draw()
 
 
-def behav_exit(log):
+def scan_exit(log):
     """Gets executed at the end of a behavioral run."""
-    # Save the dot stimulus data to a npz archive
-    return
-    dots_fname = log.fname.strip(".csv")
-    np.savez(dots_fname)
-
-    # Read in the data file and print some performance information
-    run_df = pd.read_csv(log.fname)
-    if not len(run_df):
+    df = pd.read_csv(log.fname)
+    if not len(df):
         return
-    print "Overall Accuracy: %.2f" % run_df.correct.dropna().mean()
-    print run_df.groupby("context").correct.dropna().mean()
-    print "Average RT: %.2f" % run_df.rt.dropna().mean()
-    print run_df.groupby("context").rt.dropna().mean()
+    print "Overall Accuracy: %.2f" % df.correct.dropna().mean()
+    print df.groupby("context").correct.dropna().mean()
+    print "Average RT: %.2f" % df.rt.dropna().mean()
+    print df.groupby("context").rt.dropna().mean()
+    diff = (df.assign_cue_onset - df.cue_onset).abs().mean()
+    if  diff > .1:
+        print "Detected issues with cue timing (diff = %.3f)" % diff
 
 
 def train(p, win, stims):
@@ -436,8 +451,6 @@ class EventEngine(object):
             self.win.flip()
             cue_onset_time = self.clock.getTime()
             tools.wait_check_quit(cue_dur)
-        else:
-            cue_onset_time = np.nan
 
         # Main Stimulus Presentation
         if stim:
@@ -453,8 +466,15 @@ class EventEngine(object):
                 if not frame:
                     resp_clock = core.Clock()
                     stim_onset_time = self.clock.getTime()
+
+            motion_signal = np.mean(self.dots.motion_signals)
+            color_signal = np.mean(self.dots.color_signals)
+
             dropped_after = self.win.nDroppedFrames
             dropped_frames = dropped_after - dropped_before
+
+            if not early:
+                cue_onset_time = stim_onset_time
 
             # Response Collection
             response = None
@@ -473,6 +493,8 @@ class EventEngine(object):
         else:
             dropped_frames = np.nan
             stim_onset_time = np.nan
+            motion_signal = np.nan
+            color_signal = np.nan
             response = np.nan
             correct = np.nan
             rt = np.nan
@@ -496,6 +518,8 @@ class EventEngine(object):
                       frame_id=frame_id,
                       cue_onset=cue_onset_time,
                       stim_onset=stim_onset_time,
+                      motion_signal=motion_signal,
+                      color_signal=color_signal,
                       dropped_frames=dropped_frames)
 
         return result
