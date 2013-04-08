@@ -144,7 +144,7 @@ def scan_exit(log):
         print "Average RT: %.2f" % df.rt.dropna().mean()
         print df.groupby("context").rt.dropna().mean()
     diff = (df.cue_onset_assign - df.cue_onset).abs().mean()
-    if  diff > .1:
+    if  diff > .025:
         print "Detected issues with cue timing (diff = %.3f)" % diff
 
 
