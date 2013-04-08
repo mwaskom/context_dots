@@ -277,12 +277,12 @@ def wait_for_trigger(win, params):
 
 def precise_wait(win, clock, end_time, stim):
     """Wait with precision controlled by screen refreshes."""
-    wait_time = end_time - clock.getTime()
-    wait_flips = int(wait_time * win.refresh_rate)
-    for frame in xrange(wait_flips):
+    end_time -= 1 / win.refresh_rate
+    now = clock.getTime()
+    while now < end_time:
         stim.draw()
         win.flip()
-        check_quit()
+        now = clock.getTime()
 
 
 def wait_and_listen(listen_for):
@@ -348,4 +348,5 @@ def launch_window(params):
     mon = calib.Monitor(params.monitor_name)
     m = WindowInfo(params, mon)
     win = visual.Window(**m.window_kwargs)
+    win.setRecordFrameIntervals(True)
     return win

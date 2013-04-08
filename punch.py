@@ -118,14 +118,13 @@ def scan(p, win, stims):
             # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(t_info["iti"] - 1)
-            onset_time = t_info["cue_onset_assign"] - p.fix_orient_dur
-            tools.precise_wait(win, stim_event.clock,
-                               onset_time, stims["fix"])
+            tools.wait_check_quit(t_info["iti"] - p.fix_orient_dur)
 
             # Stimulus Event
-            stim_info = t_info[["context", "cue", "motion", "color",
-                                "target", "early", "cue_dur", "stim"]]
+            stim_info = t_info[["cue_time", "context", "cue",
+                                "motion", "color",
+                                "target", "early",
+                                "cue_dur", "stim"]]
             res = stim_event(**stim_info)
             t_info = t_info.append(pd.Series(res))
             log.add_data(t_info)
@@ -143,7 +142,7 @@ def scan_exit(log):
     if df.rt.notnull().any():
         print "Average RT: %.2f" % df.rt.dropna().mean()
         print df.groupby("context").rt.dropna().mean()
-    diff = (df.cue_onset_assign - df.cue_onset).abs().mean()
+    diff = (df.cue_time - df.cue_onset).abs().mean()
     if  diff > .025:
         print "Detected issues with cue timing (diff = %.3f)" % diff
 
@@ -400,8 +399,8 @@ class EventEngine(object):
                                                pos=(0.0, 5.0),
                                                height=0.5)]
 
-    def __call__(self, context, cue, motion, color, target,
-                 early=False, cue_dur=0, stim=True,
+    def __call__(self, cue_time, context, cue, motion, color,
+                 target, early=False, cue_dur=0, stim=True,
                  frame_with_orient=False):
         """Executes the trial."""
 
@@ -425,11 +424,11 @@ class EventEngine(object):
 
         # Orient cue
         self.fix.setColor(self.fix_stim_color)
-        self.fix.draw()
         if frame_with_orient:
-            self.frame.draw()
-        self.win.flip()
-        tools.wait_check_quit(self.fix_orient_dur)
+            orient_stim = self.frame
+        else:
+            orient_stim = self.fix
+        tools.precise_wait(self.win, self.clock, cue_time, orient_stim)
 
         # Early Cue Presentation
         if early:

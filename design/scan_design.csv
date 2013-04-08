@@ -1,4 +1,4 @@
-trial_type,context,early,stim,cue,motion,color,context_freq,cue_dur,trial_dur,color_freq,context_entropy,congruent,target,block,run,run_trial,iti,cue_onset_assign,condition_trial,color_switch,context_switch,frame_switch,motion_switch
+trial_type,context,early,stim,cue,motion,color,context_freq,cue_dur,trial_dur,color_freq,context_entropy,congruent,target,block,run,run_trial,iti,cue_time,condition_trial,color_switch,context_switch,frame_switch,motion_switch
 early,0,True,True,1,1.0,1.0,0.5,1.0,3.0,0.5,0.69314718055994529,True,1.0,0,1,0,7.0,7.0,0,False,0.0,0.0,False
 early,1,True,True,0,1.0,0.0,0.5,1.0,3.0,0.5,0.69314718055994529,False,0.0,0,1,1,7.0,17.0,1,True,1.0,1.0,False
 early,0,True,True,1,1.0,1.0,0.5,1.0,3.0,0.5,0.69314718055994529,True,1.0,0,1,2,3.0,23.0,2,True,1.0,1.0,False

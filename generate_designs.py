@@ -53,7 +53,7 @@ def scan(p):
 
     # Sort out the null event timing
     schedule["iti"] = np.nan
-    schedule["cue_onset_assign"] = np.nan
+    schedule["cue_time"] = np.nan
     for run in schedule.run.unique():
         run_index = schedule.run == run
         sched_i = schedule[run_index]
@@ -64,10 +64,10 @@ def scan(p):
         total_trs = (iti.sum() + sched_i.trial_dur.sum()) / p.tr
         assert total_trs == p.trs_per_run, "Failed to distribute timing."
 
-        # Schedule the start of each trial (cue onset)
+        # Schedule the start of each trial (onset of the cue)
         trial_dur = sched_i.trial_dur + iti
-        cue_onset_assign = trial_dur.cumsum() - sched_i.trial_dur
-        schedule.cue_onset_assign[run_index] = cue_onset_assign
+        cue_time = trial_dur.cumsum() - sched_i.trial_dur
+        schedule.cue_time[run_index] = cue_time
 
     # Get a record of the trial index from a condition perspective
     condition_trial = np.empty(len(schedule), int)
