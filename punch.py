@@ -710,6 +710,7 @@ class Dots(object):
     def __init__(self, win, p):
 
         # Move some info from params into self
+        self.subframes = p.dot_subframes
         self.ndots = p.dot_count
         self.speed = p.dot_speed / win.refresh_rate
         self.colors = np.array(p.dot_colors)
@@ -728,7 +729,7 @@ class Dots(object):
                                             )
 
         # Use a cycle to control which set of dots is getting drawn
-        self._dot_cycle = itertools.cycle(range(3))
+        self._dot_cycle = itertools.cycle(range(self.subframes))
 
     def new_array(self):
 
@@ -736,8 +737,8 @@ class Dots(object):
         locs = np.linspace(-half_field, half_field, 5)
         while True:
             xys = np.random.uniform(-half_field, half_field,
-                                    size=(3, 2, self.ndots))
-            ps = np.zeros(3)
+                                    size=(self.subframes, 2, self.ndots))
+            ps = np.zeros(self.subframes)
             for i, field in enumerate(xys):
                 table, _, _ = np.histogram2d(*field, bins=(locs, locs))
                 if not table.all():
@@ -761,8 +762,8 @@ class Dots(object):
 
         # Update the positions of the signal dots
         dir = np.deg2rad(self.direction)
-        active_dots[signal, 0] += self.speed * 3 * np.cos(dir)
-        active_dots[signal, 1] += self.speed * 3 * np.sin(dir)
+        active_dots[signal, 0] += self.speed * self.subframes * np.cos(dir)
+        active_dots[signal, 1] += self.speed * self.subframes * np.sin(dir)
 
         # Find new random positions for the noise dots
         noise = ~signal
