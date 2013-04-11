@@ -119,7 +119,6 @@ train = dict(
     log_base="data/%(subject)s_training",
 
     # Experimental variables
-    n_per_block=4,
     full_coh_thresh=1,
     at_thresh_blocks=2,
     settle_slope=.1,
@@ -130,12 +129,27 @@ train = dict(
     blocks_bw_break=4,
     isi=(.5, 2.5),  # uniform params (s)
 
+
+)
+train.update(base)
+
+learn = dict(
+
+    n_per_block=2,
+    monitor_name="mlw-mbair",
+    log_base="data/%(subject)s_learn",
+    coherence=1,
+    iti=(1.5, 3),
+    perf_thresh=1,
+    blocks_at_thresh=1,
+    blocks_bw_break=5,
+
     # Feedback
     fb_freq=10,
     fb_dur=1,
 
-)
-train.update(base)
+    )
+learn.update(base)
 
 scan = dict(
 
