@@ -90,50 +90,6 @@ base = dict(
     design_file="design/scan_design.csv",
 )
 
-# Base for behavioral design and collection
-behav_base = dict(
-
-    design_template="design/behav_%s.csv",
-    n_designs=8,
-
-)
-behav_base.update(base)
-
-# Top-level paramters for behavioral experiment
-behav = dict(
-
-    monitor_name='mlw-mbair',
-    cue_dur=(.85, 1),
-
-    log_base="data/%(subject)s_behav_run%(run)d",
-
-    isi=(.5, 2.5),  # uniform params (s)
-    trials_bw_breaks=20,
-
-)
-behav.update(behav_base)
-
-# Top-level parameters for training/staircase
-train = dict(
-
-    monitor_name='mlw-mbair',
-    log_base="data/%(subject)s_training",
-
-    # Experimental variables
-    full_coh_thresh=1,
-    at_thresh_blocks=2,
-    settle_slope=.1,
-    settle_thresh=.8,
-    motion_coh_target=.2,
-    color_coh_floor=.05,
-    reversal_steps=[.06, .04, .02],
-    blocks_bw_break=4,
-    isi=(.5, 2.5),  # uniform params (s)
-
-
-)
-train.update(base)
-
 learn = dict(
 
     n_per_block=2,
@@ -162,5 +118,4 @@ scan = dict(
     )
 scan.update(base)
 
-demo = train
 scan_design = scan
