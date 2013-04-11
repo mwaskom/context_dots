@@ -118,7 +118,7 @@ def scan(p, win, stims):
             # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(t_info["iti"] - p.fix_orient_dur)
+            tools.wait_check_quit(t_info["iti"] - p.orient_dur)
 
             # Stimulus Event
             stim_info = t_info[["cue_time", "context", "cue",
@@ -213,7 +213,7 @@ def learn(p, win, stims):
                 cue_onset = now + iti
                 stims["frame"].draw()
                 win.flip()
-                tools.wait_check_quit(iti - p.fix_orient_dur)
+                tools.wait_check_quit(iti - p.orient_dur)
 
                 # Stimulus event happens here
                 res = stim_event(cue_onset, context, cue, motion, color,
@@ -224,9 +224,7 @@ def learn(p, win, stims):
                 block_acc.append(res["correct"])
                 block_trial += 1
 
-            if np.mean(block_acc) >= p.perf_thresh:
-                frame_perf[frame_id] += 1
-
+            frame_perf[frame_id] += np.mean(block_acc) >= p.perf_thresh
             if (np.array(p.blocks_at_thresh) <= frame_perf.values()).all():
                 learned = True
                 continue
@@ -299,7 +297,7 @@ class EventEngine(object):
         self.frame = stims["frame"]
         self.dots = stims["dots"]
         self.resp_keys = p.resp_keys
-        self.fix_orient_dur = p.fix_orient_dur
+        self.orient_dur = p.orient_dur
         self.fix_iti_color = p.fix_iti_color
         self.fix_stim_color = p.fix_stim_color
         self.frame_ids = p.frame_ids

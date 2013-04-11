@@ -1,6 +1,4 @@
 from __future__ import division
-# Base for everything that's
-# going to support data collection
 base = dict(
 
     experiment_name="punch",
@@ -16,7 +14,6 @@ base = dict(
     fix_iti_color="black",
     fix_stim_color="white",
     fix_shape="circle",
-    fix_orient_dur=.5,
 
     # Frame
     field_size=7,
@@ -48,8 +45,10 @@ base = dict(
     # Where coherence info is saved after training
     coh_file_template="data/%s_coherence.json",
 
-    # Timing
-    stim_dur=2,     # seconds
+    # General timing (all in seconds)
+    orient_dur=.5,
+    cue_dur=1.0,
+    stim_dur=2.0,
 
     # Communication
     instruct_size=0.5,
@@ -71,6 +70,40 @@ base = dict(
         Please tell the experimenter!
         """,
 
+)
+
+learn = dict(
+
+    n_per_block=2,
+    monitor_name="mlw-mbair",
+    log_base="data/%(subject)s_learn",
+    coherence=1,
+    iti=(1.5, 3),
+    orient_dur=.5,
+    perf_thresh=1,
+    blocks_at_thresh=1,
+    blocks_bw_break=5,
+
+    # Feedback
+    fb_freq=10,
+    fb_dur=1,
+
+    )
+learn.update(base)
+
+staircase = dict(
+
+    )
+staircase.update(base)
+
+scan = dict(
+
+    monitor_name="mlw-mbair",
+    log_base="data/%(subject)s_scan_run%(run)d",
+
+    # Timing
+    tr=2.0,
+
     # Design
     n_runs=12,
     color_freqs=[.5, 1/3, .8, 2/3, .2, 2/3, .5, .8, .2, 1/3],
@@ -88,34 +121,6 @@ base = dict(
     switch_tol=0.01,
     trial_trans_tol=0.1,
     design_file="design/scan_design.csv",
-)
-
-learn = dict(
-
-    n_per_block=2,
-    monitor_name="mlw-mbair",
-    log_base="data/%(subject)s_learn",
-    coherence=1,
-    iti=(1.5, 3),
-    perf_thresh=1,
-    blocks_at_thresh=1,
-    blocks_bw_break=5,
-
-    # Feedback
-    fb_freq=10,
-    fb_dur=1,
-
-    )
-learn.update(base)
-
-scan = dict(
-
-    tr=2.0,
-    cue_dur=1.0,
-    monitor_name="mlw-mbair",
-    log_base="data/%(subject)s_scan_run%(run)d",
 
     )
 scan.update(base)
-
-scan_design = scan

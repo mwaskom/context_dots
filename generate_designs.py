@@ -11,7 +11,7 @@ import moss
 def main(arglist):
 
     mode = arglist.pop(0)
-    p = tools.Params("%s_design" % mode)
+    p = tools.Params(mode)
     p.set_by_cmdline(arglist)
     globals()[mode](p)
 
