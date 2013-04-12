@@ -34,6 +34,9 @@ def main(arglist):
     win = tools.launch_window(p)
     win.refresh_rate = 60  # TODO FIX
 
+    # Max the screen brightness
+    tools.max_brightness(p.monitor_name)
+
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
                              mask=p.fix_shape, interpolate=True,
@@ -77,9 +80,6 @@ def main(arglist):
 
 def scan(p, win, stims):
     """Neuroimaging experiment."""
-
-    # Max the screen brightness
-    tools.max_brightness(p.monitor_name)
 
     # Get the design
     design = pd.read_csv(p.design_file)
@@ -147,10 +147,36 @@ def scan_exit(log):
         print "Detected issues with cue timing (diff = %.3f)" % diff
 
 
+def instruct(p, win, stims):
+    """Participant-paced instructions with live demos of stimuli."""
+
+    with tools.PresentationLoop(win):
+
+        stim_event = EventEngine(win, stims, p)
+        dots = stims["dots"]
+        frame = stims["frame"]
+
+        main_text = visual.TextStim(win, height=.5)
+        next_text = visual.TextStim(win, "(press space to continue)",
+                                    height=.35,
+                                    pos=(0, -5))
+
+        def slide(message, with_next_text=True):
+
+            main_text.setText(dedent(message))
+            main_text.draw()
+            if with_next_text:
+                next_text.draw()
+            win.flip()
+            tools.wait_and_listen("space")
+
+        slide("""
+              Welcome to the experiment - thank you for participating!
+              """)
+
+
 def learn(p, win, stims):
     """Blocked trials at full coherence with feedback until learned."""
-    # Max the screen brightness
-    tools.max_brightness(p.monitor_name)
 
     # Draw the instructions
     stims["instruct"].draw()
@@ -201,7 +227,7 @@ def learn(p, win, stims):
                 color = randint(len(p.dot_colors))
                 target = color if context else motion
 
-                # Set up the trial info drink
+                # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
                               motion=motion,
                               color=color)

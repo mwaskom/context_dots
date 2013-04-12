@@ -4,6 +4,7 @@ base = dict(
     experiment_name="punch",
 
     # Display setup
+    monitor_name="mlw-mbair",
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
@@ -72,10 +73,11 @@ base = dict(
 
 )
 
+instruct = base
+
 learn = dict(
 
     n_per_block=2,
-    monitor_name="mlw-mbair",
     log_base="data/%(subject)s_learn",
     coherence=1,
     iti=(1.5, 3),
@@ -98,7 +100,6 @@ staircase.update(base)
 
 scan = dict(
 
-    monitor_name="mlw-mbair",
     log_base="data/%(subject)s_scan_run%(run)d",
 
     # Timing
