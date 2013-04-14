@@ -51,6 +51,10 @@ base = dict(
     cue_dur=1.0,
     stim_dur=2.0,
 
+    # Feedback
+    fb_freq=10,
+    fb_dur=.5,
+
     # Communication
     instruct_size=0.5,
     instruct_text="""
@@ -81,19 +85,25 @@ learn = dict(
     log_base="data/%(subject)s_learn",
     coherence=1,
     iti=(1.5, 3),
-    orient_dur=.5,
     perf_thresh=1,
     blocks_at_thresh=1,
     blocks_bw_break=5,
-
-    # Feedback
-    fb_freq=10,
-    fb_dur=1,
 
     )
 learn.update(base)
 
 staircase = dict(
+
+    n_per_block=4,
+    n_blocks=6,
+    log_base="data/%(subject)s_staircase",
+    iti=(1.5, 3),
+    starting_coherence=.6,
+    burn_in_blocks=2,
+    n_up=1,
+    n_down=4,
+    step=.05,
+    blocks_bw_break=5,
 
     )
 staircase.update(base)

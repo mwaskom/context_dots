@@ -184,7 +184,7 @@ def learn(p, win, stims):
     # Set up the log object
     log_cols = ["block", "block_trial", "context", "cue", "frame_id",
                 "motion", "color", "correct", "rt", "response",
-                "cue_onset", "stim_onset", "dropped_frames"]
+                "stim_onset", "dropped_frames"]
     log = tools.DataLog(p, log_cols)
 
     # Set up the object to control stimulus presentation
@@ -206,7 +206,6 @@ def learn(p, win, stims):
         while not learned:
 
             block_acc = []
-            block_trial = 0
 
             context = block % 2
             if not context:
@@ -220,12 +219,12 @@ def learn(p, win, stims):
             tools.wait_check_quit(p.iti[0])
 
             # Loop through the block trials
-            for trial in xrange(p.n_per_block):
+            for block_trial in xrange(p.n_per_block):
 
                 # Get the feature values for this trial
                 motion = randint(len(p.dot_dirs))
                 color = randint(len(p.dot_colors))
-                target = color if context else motion
+                target = [motion, color][context]
 
                 # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
@@ -248,7 +247,6 @@ def learn(p, win, stims):
                 log.add_data(t_info)
 
                 block_acc.append(res["correct"])
-                block_trial += 1
 
             frame_perf[frame_id] += np.mean(block_acc) >= p.perf_thresh
             if (np.array(p.blocks_at_thresh) <= frame_perf.values()).all():
@@ -262,6 +260,98 @@ def learn(p, win, stims):
                 tools.wait_check_quit(p.iti[1])
 
             block += 1
+
+
+def staircase(p, win, stims):
+    """Find ideal coherence values for each context with a staircase."""
+
+     # Draw the instructions
+    stims["instruct"].draw()
+
+    # Set up the log object
+    log_cols = ["block", "block_trial",
+                "context", "cue", "frame_id",
+                "motion_coherence", "color_coherence",
+                "motion", "color",
+                "correct", "rt", "response",
+                "stim_onset", "dropped_frames"]
+    log = tools.DataLog(p, log_cols)
+
+    # Set up the object to control stimulus presentation
+    stim_event = EventEngine(win, stims, p, feedback=True)
+    dots = stims["dots"]
+
+    # Set the coherence values
+    dots.motion_coherence = p.starting_coherence
+    dots.color_coherence = p.starting_coherence
+
+    coherences = [p.starting_coherence] * 2
+
+    # Set up the accuracy trackers
+    resp_accs = [[], []]
+
+    with tools.PresentationLoop(win, log):
+        cue = 0
+        stim_event.clock.reset()
+        for block in xrange(p.n_blocks):
+
+            block_trial = 0
+            context = block % 2
+            if not context:
+                cue = (cue + 1) % p.frame_per_context
+
+            block_info = dict(block=block, context=context, cue=cue)
+            frame_id = p.frame_ids[context][cue]
+            stims["frame"].make_active(frame_id)
+            stims["frame"].draw()
+            win.flip()
+            tools.wait_check_quit(p.iti[0])
+
+            # Loop through the block trials
+            for block_trial in xrange(p.n_per_block):
+
+                # Get the feature values for this trial
+                motion = randint(len(p.dot_dirs))
+                color = randint(len(p.dot_colors))
+                target = [motion, color][context]
+
+                # Set the coherence values for this trial
+                if block >= p.burn_in_blocks:
+                    if not any(resp_accs[context][-p.n_up:]):
+                        step_sign = 1
+                    elif all(resp_accs[context][-p.n_down:]):
+                        step_sign = -1
+                    else:
+                        step_sign = 0
+                coherences[context] += step_sign * p.step
+                for i, context_ in enumerate(["motion", "color"]):
+                    setattr(dots, context_ + "_coherence", coherences[i])
+
+                # Set up the trial info dict
+                t_info = dict(block_trial=block_trial,
+                              motion=motion,
+                              color=color)
+                t_info.update(dict(zip(["motion_coherence",
+                                        "color_coherence"],
+                                       coherences)))
+                t_info.update(block_info)
+
+                # Intra-trial interval
+                now = stim_event.clock.getTime()
+                iti = uniform(*p.iti)
+                cue_onset = now + iti
+                stims["frame"].draw()
+                win.flip()
+                tools.wait_check_quit(iti - p.orient_dur)
+
+                # Stimulus event happens here
+                res = stim_event(cue_onset, context, cue, motion, color,
+                                 target, frame_with_orient=True)
+                t_info.update(res)
+                log.add_data(t_info)
+
+                # Track the accuracies for staircasing
+                resp_accs[context].append(res["correct"])
 
 
 def demo(p, win, stims):
@@ -382,7 +472,8 @@ class EventEngine(object):
         if stim:
             dropped_before = self.win.nDroppedFrames
             event.clearEvents()
-            for frame in xrange(self.p.stim_dur * self.win.refresh_rate):
+            stim_frames = int(self.p.stim_dur * self.win.refresh_rate)
+            for frame in xrange(stim_frames):
                 self.dots.draw()
                 self.frame.draw()
                 if self.debug:
@@ -427,7 +518,8 @@ class EventEngine(object):
 
         # Feedback
         if self.feedback and not correct:
-            for frame in xrange(self.fb_dur * self.win.refresh_rate):
+            fb_frames = int(self.fb_dur * self.win.refresh_rate)
+            for frame in xrange(fb_frames):
                 if not frame % self.fb_freq:
                     self.frame.flip_phase()
                 self.frame.draw()
