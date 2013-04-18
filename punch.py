@@ -222,9 +222,7 @@ def learn(p, win, stims):
             for block_trial in xrange(p.n_per_block):
 
                 # Get the feature values for this trial
-                motion = randint(len(p.dot_dirs))
-                color = randint(len(p.dot_colors))
-                target = [motion, color][context]
+                motion, color, target = trial_values(p, context)
 
                 # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
@@ -311,9 +309,7 @@ def staircase(p, win, stims):
             for block_trial in xrange(p.n_per_block):
 
                 # Get the feature values for this trial
-                motion = randint(len(p.dot_dirs))
-                color = randint(len(p.dot_colors))
-                target = [motion, color][context]
+                motion, color, target = trial_values(p, context)
 
                 # Set the coherence values for this trial
                 if block >= p.burn_in_blocks:
@@ -324,8 +320,8 @@ def staircase(p, win, stims):
                     else:
                         step_sign = 0
                 coherences[context] += step_sign * p.step
-                for i, context_ in enumerate(["motion", "color"]):
-                    setattr(dots, context_ + "_coherence", coherences[i])
+                dots.motion_coherence = coherences[0]
+                dots.color_coherence = coherences[1]
 
                 # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
@@ -352,6 +348,14 @@ def staircase(p, win, stims):
 
                 # Track the accuracies for staircasing
                 resp_accs[context].append(res["correct"])
+
+
+def trial_values(p, context):
+    """Get motion, color, and target value for training."""
+    motion = randint(len(p.dot_dirs))
+    color = randint(len(p.dot_colors))
+    target = [motion, color][context]
+    return motion, color, target
 
 
 def demo(p, win, stims):
