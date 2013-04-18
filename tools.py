@@ -16,6 +16,7 @@ import pandas as pd
 from numpy.random import RandomState
 from psychopy import core, event, visual
 import psychopy.monitors.calibTools as calib
+from psychopy import logging
 
 
 class Params(object):
@@ -349,4 +350,5 @@ def launch_window(params):
     m = WindowInfo(params, mon)
     win = visual.Window(**m.window_kwargs)
     win.setRecordFrameIntervals(True)
+    logging.console.setLevel(logging.CRITICAL)
     return win
