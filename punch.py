@@ -319,6 +319,8 @@ def staircase(p, win, stims):
                         step_sign = -1
                     else:
                         step_sign = 0
+                else:
+                    step_sign = 0
                 coherences[context] += step_sign * p.step
                 dots.motion_coherence = coherences[0]
                 dots.color_coherence = coherences[1]
