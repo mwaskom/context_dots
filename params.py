@@ -8,7 +8,7 @@ base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=1,
-    window_color=-1./3,
+    window_color=-.333,
 
     # Fixation
     fix_size=.2,
@@ -79,7 +79,8 @@ base = dict(
 
 instruct = base
 
-learn = dict(
+learn = base
+learn.update(dict(
 
     n_per_block=2,
     log_base="data/%(subject)s_learn",
@@ -89,10 +90,10 @@ learn = dict(
     blocks_at_thresh=1,
     blocks_bw_break=5,
 
-    )
-learn.update(base)
+    ))
 
-staircase = dict(
+staircase = base
+staircase.update(dict(
 
     n_per_block=4,
     n_blocks=6,
@@ -105,20 +106,20 @@ staircase = dict(
     step=.05,
     blocks_bw_break=5,
 
-    )
-staircase.update(base)
+    ))
 
-practice = dict(
+practice = base
+practice.update(dict(
 
     log_base="data/%(subject)s_practice_run%(run)d",
     iti=(1.5, 3),
     n_trials=10,
     trials_bw_break=5,
 
-    )
-practice.update(base)
+    ))
 
-scan = dict(
+scan = base
+scan.update(dict(
 
     log_base="data/%(subject)s_scan_run%(run)d",
 
@@ -143,5 +144,4 @@ scan = dict(
     trial_trans_tol=0.1,
     design_file="design/scan_design.csv",
 
-    )
-scan.update(base)
+    ))
