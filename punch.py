@@ -428,49 +428,6 @@ def subject_coherence(p, stims):
     stims["dots"].color_coherence = col_coh
 
 
-def demo(p, win, stims):
-    """Brief demonstration of stimuli before training."""
-
-    with tools.PresentationLoop(win):
-        frame = stims["frame"]
-        stims["dots"].new_signals(*[p.motion_coh_target] * 2)
-
-        stim_event = EventEngine(win, stims, p)
-        frame.make_active("a")
-
-        tools.wait_and_listen("space")
-
-        stim_event(0, 0, 0, 0)
-        win.flip()
-        tools.wait_and_listen("space")
-
-        stim_event(0, 0, 0, 0)
-        win.flip()
-        tools.wait_and_listen("space")
-
-        for context in [0, 1]:
-            for cue in range(2):
-                id = [["a", "b"], ["c", "d"]][context][cue]
-                frame.make_active(id)
-                frame.draw()
-                win.flip()
-                tools.wait_and_listen("space")
-
-        for context in [0, 1]:
-            for cue in range(2):
-                id = [["a", "b"], ["c", "d"]][context][cue]
-                frame.make_active(id)
-                frame.draw()
-                win.flip()
-                tools.wait_and_listen("space")
-                for refresh in xrange(p.fb_dur * win.refresh_rate):
-                    if not refresh % p.fb_freq:
-                        frame.flip_phase()
-                    frame.draw()
-                    win.flip()
-                tools.wait_and_listen("space")
-
-
 # Stimulus Classes
 # ================
 
