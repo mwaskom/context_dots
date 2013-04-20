@@ -15,23 +15,23 @@ import numpy as np
 from numpy.random import randint, uniform
 from scipy import stats
 from psychopy import visual, core, event
-import tools
+import cregg
 
 
 def main(arglist):
 
     # Get the experiment paramters
     mode = arglist.pop(0)
-    p = tools.Params(mode)
+    p = cregg.Params(mode)
     p.set_by_cmdline(arglist)
 
     # Assign the frame identities randomly over subjects
-    state = tools.subject_specific_state(p.subject)
+    state = cregg.subject_specific_state(p.subject)
     frame_ids = state.permutation(list(letters[:2 * p.frame_per_context]))
     p.frame_ids = frame_ids.reshape(2, -1).tolist()
 
     # Open up the stimulus window
-    win = tools.launch_window(p)
+    win = cregg.launch_window(p)
     win.refresh_rate = 60  # TODO FIX
 
     # Set up the stimulus objects
@@ -40,7 +40,7 @@ def main(arglist):
                              color=p.fix_iti_color, size=p.fix_size)
 
     instruct_text = dedent(p.instruct_text)
-    instruct = tools.WaitText(win, instruct_text,
+    instruct = cregg.WaitText(win, instruct_text,
                               height=p.instruct_size,
                               advance_keys=p.wait_keys,
                               quit_keys=p.quit_keys)
@@ -53,7 +53,7 @@ def main(arglist):
 
     if hasattr(p, "break_text"):
         break_text = dedent(p.break_text)
-        take_break = tools.WaitText(win, break_text,
+        take_break = cregg.WaitText(win, break_text,
                                     height=p.break_text_size,
                                     advance_keys=p.wait_keys,
                                     quit_keys=p.quit_keys)
@@ -61,7 +61,7 @@ def main(arglist):
 
     if hasattr(p, "finish_text"):
         finish_text = dedent(p.finish_text)
-        finish_run = tools.WaitText(win, finish_text,
+        finish_run = cregg.WaitText(win, finish_text,
                                     height=p.break_text_size,
                                     advance_keys=p.wait_keys,
                                     quit_keys=p.quit_keys)
@@ -98,17 +98,17 @@ def scan(p, win, stims):
                          "response", "rt", "correct",
                          "motion_signal", "color_signal",
                          "dropped_frames"]
-    log = tools.DataLog(p, log_cols)
+    log = cregg.DataLog(p, log_cols)
 
     # Execute the experiment
-    with tools.PresentationLoop(win, log, scan_exit):
+    with cregg.PresentationLoop(win, log, scan_exit):
         stim_event.clock.reset()
         for t, t_info in design.iterrows():
 
             # ITI fixation
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(t_info["iti"] - p.orient_dur)
+            cregg.wait_check_quit(t_info["iti"] - p.orient_dur)
 
             # Stimulus Event
             stim_info = t_info[["cue_time", "context", "cue",
@@ -140,7 +140,7 @@ def scan_exit(log):
 def instruct(p, win, stims):
     """Participant-paced instructions with live demos of stimuli."""
 
-    with tools.PresentationLoop(win):
+    with cregg.PresentationLoop(win):
 
         stim_event = EventEngine(win, stims, p)
         dots = stims["dots"]
@@ -158,7 +158,7 @@ def instruct(p, win, stims):
             if with_next_text:
                 next_text.draw()
             win.flip()
-            tools.wait_and_listen("space")
+            cregg.wait_and_listen("space")
 
         slide("""
               Welcome to the experiment - thank you for participating!
@@ -175,7 +175,7 @@ def learn(p, win, stims):
     log_cols = ["block", "block_trial", "context", "cue", "frame_id",
                 "motion", "color", "correct", "rt", "response",
                 "stim_onset", "dropped_frames"]
-    log = tools.DataLog(p, log_cols)
+    log = cregg.DataLog(p, log_cols)
 
     # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p, feedback=True)
@@ -191,7 +191,7 @@ def learn(p, win, stims):
     learned = False
     block = 0
     cue = 0
-    with tools.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, log):
         stim_event.clock.reset()
         while not learned:
 
@@ -206,7 +206,7 @@ def learn(p, win, stims):
             stims["frame"].make_active(frame_id)
             stims["frame"].draw()
             win.flip()
-            tools.wait_check_quit(p.iti[0])
+            cregg.wait_check_quit(p.iti[0])
 
             # Loop through the block trials
             for block_trial in xrange(p.n_per_block):
@@ -226,7 +226,7 @@ def learn(p, win, stims):
                 cue_onset = now + iti
                 stims["frame"].draw()
                 win.flip()
-                tools.wait_check_quit(iti - p.orient_dur)
+                cregg.wait_check_quit(iti - p.orient_dur)
 
                 # Stimulus event happens here
                 res = stim_event(cue_onset, context, cue, motion, color,
@@ -245,7 +245,7 @@ def learn(p, win, stims):
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                tools.wait_check_quit(p.iti[1])
+                cregg.wait_check_quit(p.iti[1])
 
             block += 1
 
@@ -263,7 +263,7 @@ def staircase(p, win, stims):
                 "motion", "color",
                 "correct", "rt", "response",
                 "stim_onset", "dropped_frames"]
-    log = tools.DataLog(p, log_cols)
+    log = cregg.DataLog(p, log_cols)
 
     # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p, feedback=True)
@@ -278,7 +278,7 @@ def staircase(p, win, stims):
     # Set up the accuracy trackers
     resp_accs = [[], []]
 
-    with tools.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, log):
         cue = 0
         stim_event.clock.reset()
         for block in xrange(p.n_blocks):
@@ -293,7 +293,7 @@ def staircase(p, win, stims):
             stims["frame"].make_active(frame_id)
             stims["frame"].draw()
             win.flip()
-            tools.wait_check_quit(p.iti[0])
+            cregg.wait_check_quit(p.iti[0])
 
             # Loop through the block trials
             for block_trial in xrange(p.n_per_block):
@@ -330,7 +330,7 @@ def staircase(p, win, stims):
                 cue_onset = now + iti
                 stims["frame"].draw()
                 win.flip()
-                tools.wait_check_quit(iti - p.orient_dur)
+                cregg.wait_check_quit(iti - p.orient_dur)
 
                 # Stimulus event happens here
                 res = stim_event(cue_onset, context, cue, motion, color,
@@ -345,7 +345,7 @@ def staircase(p, win, stims):
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                tools.wait_check_quit(p.iti[1])
+                cregg.wait_check_quit(p.iti[1])
 
 
 def practice(p, win, stims):
@@ -362,13 +362,13 @@ def practice(p, win, stims):
                 "motion", "color",
                 "correct", "rt", "response",
                 "stim_onset", "dropped_frames"]
-    log = tools.DataLog(p, log_cols)
+    log = cregg.DataLog(p, log_cols)
 
     # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p)
 
     # Execute the experimental loop
-    with tools.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, log):
         stim_event.clock.reset()
         for trial in xrange(p.n_trials):
 
@@ -380,15 +380,15 @@ def practice(p, win, stims):
             cue_time = now + iti
             stims["fix"].draw()
             win.flip()
-            tools.wait_check_quit(iti - p.orient_dur)
+            cregg.wait_check_quit(iti - p.orient_dur)
 
             # Generate stimulus information for this trial
             s_info = dict(
                 cue_time=cue_time,
-                context=tools.flip(),
-                cue=tools.flip(),
-                motion=tools.flip(),
-                color=tools.flip(),
+                context=cregg.flip(),
+                cue=cregg.flip(),
+                motion=cregg.flip(),
+                color=cregg.flip(),
             )
             target = [s_info["motion"], s_info["color"]][s_info["context"]]
             s_info["target"] = target
@@ -403,7 +403,7 @@ def practice(p, win, stims):
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
-                tools.wait_check_quit(p.iti[1])
+                cregg.wait_check_quit(p.iti[1])
 
         stims["finish"].draw()
 
@@ -490,14 +490,14 @@ class EventEngine(object):
             orient_stim = self.frame
         else:
             orient_stim = self.fix
-        tools.precise_wait(self.win, self.clock, cue_time, orient_stim)
+        cregg.precise_wait(self.win, self.clock, cue_time, orient_stim)
 
         # Early Cue Presentation
         if early:
             self.frame.draw()
             self.win.flip()
             cue_onset_time = self.clock.getTime()
-            tools.wait_check_quit(cue_dur)
+            cregg.wait_check_quit(cue_dur)
 
         # Main Stimulus Presentation
         if stim:
