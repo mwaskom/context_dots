@@ -34,9 +34,6 @@ def main(arglist):
     win = tools.launch_window(p)
     win.refresh_rate = 60  # TODO FIX
 
-    # Max the screen brightness
-    tools.max_brightness(p.monitor_name)
-
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
                              mask=p.fix_shape, interpolate=True,
@@ -91,15 +88,8 @@ def scan(p, win, stims):
     # Set up the object to control stimulus presentation
     stim_event = EventEngine(win, stims, p)
 
-    # Determine the coherence for this subject
-    coh_file = p.coh_file_template % p.subject
-    with open(coh_file) as fid:
-        coherences = json.load(fid)
-    p.__dict__.update(coherences)
-    contexts = ["mot", "col"]
-    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in contexts]
-    stims["dots"].motion_coherence = mot_coh
-    stims["dots"].color_coherence = col_coh
+    # Find and set this subjects' coherence values
+    subject_coherence(p, stims)
 
     # Set up the log file
     d_cols = list(design.columns)
@@ -351,6 +341,72 @@ def staircase(p, win, stims):
                 # Track the accuracies for staircasing
                 resp_accs[context].append(res["correct"])
 
+            if block and not block % p.blocks_bw_break:
+                stims["break"].draw()
+                stims["fix"].draw()
+                win.flip()
+                tools.wait_check_quit(p.iti[1])
+
+
+def practice(p, win, stims):
+    """Random (balanced) run-time generated for practicing outside scanner."""
+
+     # Draw the instructions
+    stims["instruct"].draw()
+
+    # Find and set this subjects' coherence values
+    subject_coherence(p, stims)
+
+    # Set up the log object
+    log_cols = ["trial", "context", "cue", "frame_id",
+                "motion", "color",
+                "correct", "rt", "response",
+                "stim_onset", "dropped_frames"]
+    log = tools.DataLog(p, log_cols)
+
+    # Set up the object to control stimulus presentation
+    stim_event = EventEngine(win, stims, p)
+
+    # Execute the experimental loop
+    with tools.PresentationLoop(win, log):
+        stim_event.clock.reset()
+        for trial in xrange(p.n_trials):
+
+            t_info = dict(trial=trial)
+
+            # Intra-trial interval
+            now = stim_event.clock.getTime()
+            iti = uniform(*p.iti)
+            cue_time = now + iti
+            stims["fix"].draw()
+            win.flip()
+            tools.wait_check_quit(iti - p.orient_dur)
+
+            # Generate stimulus information for this trial
+            s_info = dict(
+                cue_time=cue_time,
+                context=tools.flip(),
+                cue=tools.flip(),
+                motion=tools.flip(),
+                color=tools.flip(),
+            )
+            target = [s_info["motion"], s_info["color"]][s_info["context"]]
+            s_info["target"] = target
+            t_info.update(s_info)
+
+            # Stimulus event happens here
+            res = stim_event(**s_info)
+            t_info.update(res)
+            log.add_data(t_info)
+
+            if trial and not trial % p.trials_bw_break:
+                stims["break"].draw()
+                stims["fix"].draw()
+                win.flip()
+                tools.wait_check_quit(p.iti[1])
+
+        stims["finish"].draw()
+
 
 def trial_values(p, context):
     """Get motion, color, and target value for training."""
@@ -358,6 +414,18 @@ def trial_values(p, context):
     color = randint(len(p.dot_colors))
     target = [motion, color][context]
     return motion, color, target
+
+
+def subject_coherence(p, stims):
+    """Set the subject-specfic coherece values on the dot object."""
+    coh_file = p.coh_file_template % p.subject
+    with open(coh_file) as fid:
+        coherences = json.load(fid)
+    p.__dict__.update(coherences)
+    contexts = ["mot", "col"]
+    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in contexts]
+    stims["dots"].motion_coherence = mot_coh
+    stims["dots"].color_coherence = col_coh
 
 
 def demo(p, win, stims):

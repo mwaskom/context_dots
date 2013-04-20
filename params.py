@@ -108,6 +108,16 @@ staircase = dict(
     )
 staircase.update(base)
 
+practice = dict(
+
+    log_base="data/%(subject)s_practice_run%(run)d",
+    iti=(1.5, 3),
+    n_trials=10,
+    trials_bw_break=5,
+
+    )
+practice.update(base)
+
 scan = dict(
 
     log_base="data/%(subject)s_scan_run%(run)d",
