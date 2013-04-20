@@ -70,9 +70,6 @@ class Params(object):
         if self.debug:
             self.full_screen = False
 
-        if self.fmri:
-            self.monitor_name = "cni_lcd2"
-
         if hasattr(self, "dummy_trs") and not self.fmri:
             self.dummy_trs = 1
 
@@ -227,11 +224,10 @@ def git_hash():
 
 def max_brightness(monitor):
     """Maximize the brightness on a laptop."""
-    if monitor in ["mlw-mbpro", "mlw-mbair", "WendyO"]:
-        try:
-            call(["brightness", "1"])
-        except OSError:
-            print "Could not modify screen brightness"
+    try:
+        call(["brightness", "1"])
+    except OSError:
+        print "Could not modify screen brightness"
 
 
 def check_quit(quit_keys=["q", "escape"]):
@@ -323,12 +319,18 @@ def categorical(p, size=None):
 
 
 def flip(p=0.5):
-
+    """Shorthand for a bernoulli sample."""
     return np.random.binomial(1, p)
 
 
 def load_design_csv(params):
+    """Load a design file with a quasi-random
 
+    This assumes that designs are named with letters, and then
+    randomized across runs for each subject. It uses the subject
+    name hash trick to have consisent randomization for each subject ID.
+
+    """
     state = subject_specific_state(params.subject)
     choices = list(letters[:params.n_designs])
     params.sched_id = state.permutation(choices)[params.run - 1]
@@ -338,7 +340,7 @@ def load_design_csv(params):
 
 
 def subject_specific_state(subject):
-
+    """Obtain a numpy random state that is consistent for a subject ID."""
     state = RandomState(abs(hash(subject)))
     return state
 
