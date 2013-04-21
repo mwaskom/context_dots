@@ -1,4 +1,5 @@
 from __future__ import division
+from copy import deepcopy
 base = dict(
 
     experiment_name="punch",
@@ -77,9 +78,9 @@ base = dict(
 
 )
 
-instruct = base
+instruct = deepcopy(base)
 
-learn = base
+learn = deepcopy(base)
 learn.update(dict(
 
     n_per_block=2,
@@ -92,7 +93,7 @@ learn.update(dict(
 
     ))
 
-staircase = base
+staircase = deepcopy(base)
 staircase.update(dict(
 
     n_per_block=4,
@@ -108,7 +109,7 @@ staircase.update(dict(
 
     ))
 
-practice = base
+practice = deepcopy(base)
 practice.update(dict(
 
     log_base="data/%(subject)s_practice_run%(run)d",
@@ -118,7 +119,7 @@ practice.update(dict(
 
     ))
 
-scan = base
+scan = deepcopy(base)
 scan.update(dict(
 
     log_base="data/%(subject)s_scan_run%(run)d",
