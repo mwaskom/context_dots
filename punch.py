@@ -249,6 +249,8 @@ def learn(p, win, stims):
 
             block += 1
 
+        stims["finish"].draw()
+
 
 def staircase(p, win, stims):
     """Find ideal coherence values for each context with a staircase."""
@@ -276,7 +278,9 @@ def staircase(p, win, stims):
     coherences = [p.starting_coherence] * 2
 
     # Set up the accuracy trackers
-    resp_accs = [[], []]
+    # The convention is that wrong answers are positive (up)
+    # while correct answers are negative (down)
+    resp_accs = [0, 0]
 
     with cregg.PresentationLoop(win, log):
         cue = 0
@@ -301,17 +305,6 @@ def staircase(p, win, stims):
                 # Get the feature values for this trial
                 motion, color, target = trial_values(p, context)
 
-                # Set the coherence values for this trial
-                if block >= p.burn_in_blocks:
-                    if not any(resp_accs[context][-p.n_up:]):
-                        step_sign = 1
-                    elif all(resp_accs[context][-p.n_down:]):
-                        step_sign = -1
-                    else:
-                        step_sign = 0
-                else:
-                    step_sign = 0
-                coherences[context] += step_sign * p.step
                 dots.motion_coherence = coherences[0]
                 dots.color_coherence = coherences[1]
 
@@ -339,13 +332,35 @@ def staircase(p, win, stims):
                 log.add_data(t_info)
 
                 # Track the accuracies for staircasing
-                resp_accs[context].append(res["correct"])
+                if block < p.burn_in_blocks:
+                    continue
+
+                step = -1 if res["correct"] else 1
+                if np.sign(resp_accs[context]) == step:
+                    resp_accs[context] += step
+                else:
+                    resp_accs[context] = step
+
+                # Update the coherence values
+                if resp_accs[context] == p.n_up:
+                    step_sign = 1
+                    resp_accs[context] = 0
+                elif resp_accs[context] == -p.n_down:
+                    step_sign = -1
+                    resp_accs[context] = 0
+                else:
+                    step_sign = 0
+                coherences[context] += step_sign * p.step
 
             if block and not block % p.blocks_bw_break:
                 stims["break"].draw()
                 stims["fix"].draw()
                 win.flip()
                 cregg.wait_check_quit(p.iti[1])
+
+        stims["finish"].draw()
+
+        # TODO save the coherence values!
 
 
 def practice(p, win, stims):

@@ -97,7 +97,7 @@ staircase = deepcopy(base)
 staircase.update(dict(
 
     n_per_block=4,
-    n_blocks=6,
+    n_blocks=20,
     log_base="data/%(subject)s_staircase",
     iti=(1.5, 3),
     starting_coherence=.6,
