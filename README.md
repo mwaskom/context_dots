@@ -11,10 +11,19 @@ It also makes heavy use of the cregg package for experimental utilities.
 Design generation uses the moss package. Otherwise the standard SciPy stack
 should be sufficient to control the experiment.
 
+
+All files take a `-subject` (can be shortened to `-s`) argument. Several
+aspects are randomized across subjects based on the subject ID, so any
+interaction with a subject should use this flag.
+
 ### punch.py
 
-The script exposes the main interface for collecting data. There are several
-sub-modes of this script for presenting different stages of the experiment.
+This script exposes the main interface for collecting data. There are several
+sub-modes of this script for presenting different stages of the experiment
+(these are detailed below).
+
+Run with the `-debug` flag to present in a separate GUI window. Debug mode
+also adds textual information about the stimulus parameters on the screen.
 
 #### instruct
 
@@ -41,7 +50,7 @@ perfectly balanced for short runs.
 
 The main experiment. Reads trial schedule information produced by
 `generate_designs.py`. Can be collected in scanner mode or computer mode,
-depending on presence of -fmri switch.
+depending on presence of `-fmri` switch.
 
 ### params.py
 
