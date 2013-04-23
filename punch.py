@@ -148,7 +148,7 @@ def instruct(p, win, stims):
 
         main_text = visual.TextStim(win, height=.5)
         next_text = visual.TextStim(win, "(press space to continue)",
-                                    height=.35,
+                                    height=.4,
                                     pos=(0, -5))
 
         def slide(message, with_next_text=True):
@@ -162,7 +162,200 @@ def instruct(p, win, stims):
 
         slide("""
               Welcome to the experiment - thank you for participating!
+
+              Please read the following instructions carefully and ask
+              the experimenter if any part is confusing.
               """)
+
+        slide("""
+              In this experiment, you'll be making decisions about
+              the information you see in simple, noisy stimuli.
+
+              Each stimulus will consist of a field of dots.
+
+              Some of the dots will be moving either up or down,
+              while the rest will flicker randomly.
+
+              Some of the dots will be green, and the rest will be red.
+
+              Press space to see an example stimulus.
+              """, False)
+
+        dots.motion_coherence = .5
+        dots.color_coherence = .5
+        at_time = stim_event.clock.getTime() + 1
+        stim_event(at_time, 0, 0, 0, 0, 0)
+
+        slide("""
+              On each trial, you'll be making one of two decisions:
+
+              - Are the dots moving up or are they moving down?
+
+              - Are there more red dots or more green dots?
+
+              """)
+
+        slide("""
+              The pattern in the frame around the stimulus is what signals
+              whether you should make a motion decision or a color decision
+              on each trial.
+
+              Next, you'll see each of the four frames. Two of them will
+              mean you should make a decision about dot motion, while the other
+              two will mean you should make a decision about the dot colors.
+
+              Don't worry too much about memorizing the frames now; you'll
+              receive extensive practice before the main experiment begins.
+
+              """)
+
+        for i, context in enumerate(["motion", "color"]):
+            for j in range(p.frame_per_context):
+                frame.make_active(p.frame_ids[i][j])
+                frame.draw()
+                slide("\n\n" + context)
+
+        button_ass = dict(motion_left=p.dot_dir_names[0],
+                          motion_right=p.dot_dir_names[1],
+                          color_left=p.dot_color_names[0],
+                          color_right=p.dot_color_names[1])
+
+        slide("""
+              For all parts of the experiment, use the index and middle
+              fingers on your right hand to make your responses.
+
+              Inside the scanner you'll be using a button box with just
+              a few buttons. For the parts that take place on a computer,
+              you should make your responses using the %s and %s buttons.
+              """ % tuple(p.resp_keys))
+
+        slide("""
+              For the two kinds of decisions (motion and color), you'll
+              be responding using the same two buttons, so each button
+              means different things depending on the decision context.
+
+              On motion trials:
+                index : %(motion_left)s
+                middle: %(motion_right)s
+
+              On color trials:
+                index : %(color_left)s
+                middle: %(color_right)s
+
+              Again, don't worry too much about memorizing these now.
+              """ % button_ass)
+
+        slide("""
+              Our aim is to get a precise measurement of how long it takes
+              you to make these decisions. Although it is important that you
+              answer accurately, we ask that you start making the decision
+              as soon as the dots appear and respond right when you have
+              made the decision.
+
+              Your response will be accepted as long as the dots are still
+              on the screen for that trial, but again, press the correct
+              button as soon as you have an answer.
+              """)
+
+        slide("""
+              Because we are trying to get precise measurements, it's
+              important that you pay as close attention as possible during
+              the experiment, so you can respond quickly and accurately.
+
+              For the parts that take place outside the scanner, there will
+              be frequent breaks to allow you to rest.
+              """)
+
+        slide("""
+              It's also important that, to minimize eye movements, you keep
+              your eyes fixated on the spot in the center of the screen
+              throughout  the experiment whenever it is present.
+
+              The fixation spot will turn from black to white very shortly
+              before each trial begins to signal that you should get ready.
+              """)
+
+        slide("""
+              The basic structure of the experiment is as follows.
+
+              The first session (today) is focused on helping you learn
+              the task and callibrating the difficulty to your performance.
+              """)
+
+        slide("""
+              During the initial part, you will learn what each frame pattern
+              means and which buttons to press for each decision.
+
+              For this part of the experiment, the stimuli will be presented
+              with no noise, and you should focus on learning how to perform
+              the task. As you become more comfortable, practice making your
+              decisions as fast as you can.
+
+              To help you learn, you'll receive feedback when you make a
+              mistake. After a trial where you make an error, the frame
+              surrounding the stimulus will flicker a few times to signal
+              an incorrect response. Nothing will happen after correct trials.
+
+              Press space to see an example of this negative feedback.
+              You can also practice fixating on the central spot.
+              """, False)
+
+        frame.draw()
+        win.flip()
+        cregg.wait_check_quit(1)
+
+        fb_frames = int(p.fb_dur * win.refresh_rate) * 2
+        for i in xrange(fb_frames):
+            if not i % p.fb_freq:
+                frame.flip_phase()
+            frame.draw()
+            win.flip()
+
+        frame.reset_phase()
+        slide("""
+              The second task will begin to introduce noise into the stimuli.
+              Our goal here is to find a level of noise for the dot motion
+              and color so that the two decisions are equally difficult.
+
+              You'll see the level of noise changing over the course of this
+              part as we try to dial in the parameters for you.
+
+              To help us callibrate the difficulty, it's important that you
+              answer quickly and accurately, just as you will during the
+              main experiment.
+
+              You'll also receive feedback during this task.
+              """)
+
+        slide("""
+              The third and final part you'll perform today will be a practice
+              session that is very similar to what you'll be doing inside the
+              scanner. You'll no longer be receiving feedback for this part,
+              and it's important that you try your best to meet the performance
+              criterion to proceed to the scanning session.
+
+              Because scanner time is quite valuable, we can only scan
+              participants who are able to perform at a high level of
+              speed and accuracy during the practice session.
+              """)
+
+        slide("""
+              That was a lot of information! The highlights:
+
+              The frame pattern says whether you should make a decision
+              about the direction of motion or the dominant color in the
+              field of moving dots.
+
+              Start making your decision when the dots come on the screen,
+              and respond as quickly as you have an answer.
+
+              Fixate on the central spot whenever it is on the screen.
+
+              Ask the experimenter if you have questions about these or
+              any of the other instructions. Good luck!
+              """)
+
+        slide("Ready to start! Please tell the exerimenter!", False)
 
 
 def learn(p, win, stims):
@@ -275,14 +468,14 @@ def staircase(p, win, stims):
     dots.motion_coherence = p.starting_coherence
     dots.color_coherence = p.starting_coherence
 
-    coherences = [p.starting_coherence] * 2
+    log.coherences = [p.starting_coherence] * 2
 
     # Set up the accuracy trackers
     # The convention is that wrong answers are positive (up)
     # while correct answers are negative (down)
     resp_accs = [0, 0]
 
-    with cregg.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, log, staircase_exit):
         cue = 0
         stim_event.clock.reset()
         for block in xrange(p.n_blocks):
@@ -305,8 +498,8 @@ def staircase(p, win, stims):
                 # Get the feature values for this trial
                 motion, color, target = trial_values(p, context)
 
-                dots.motion_coherence = coherences[0]
-                dots.color_coherence = coherences[1]
+                dots.motion_coherence = log.coherences[0]
+                dots.color_coherence = log.coherences[1]
 
                 # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
@@ -314,7 +507,7 @@ def staircase(p, win, stims):
                               color=color)
                 t_info.update(dict(zip(["motion_coherence",
                                         "color_coherence"],
-                                       coherences)))
+                                       log.coherences)))
                 t_info.update(block_info)
 
                 # Intra-trial interval
@@ -350,7 +543,7 @@ def staircase(p, win, stims):
                     resp_accs[context] = 0
                 else:
                     step_sign = 0
-                coherences[context] += step_sign * p.step
+                log.coherences[context] += step_sign * p.step
 
             if block and not block % p.blocks_bw_break:
                 stims["break"].draw()
@@ -360,7 +553,32 @@ def staircase(p, win, stims):
 
         stims["finish"].draw()
 
-        # TODO save the coherence values!
+
+def staircase_exit(log):
+    """Save the final coherence values and report to terminal."""
+    coh_file = log.p.coh_file_template % log.p.subject
+    cregg.archive_old_version(coh_file)
+
+    df = pd.read_csv(log.fname)
+    last_block = df.block.max()
+    df = df[df.block >= last_block - log.p.n_calc_blocks]
+
+    coh_dict = dict()
+    coh_dict["motion"] = df[df.context == 0].motion_coherence.mean()
+    coh_dict["color"] = df[df.context == 1].color_coherence.mean()
+
+    with open(coh_file, "w") as fid:
+        json.dump(coh_dict, fid)
+
+    print dedent("""
+                 Final coherence:
+                   motion: %(motion).2f
+                   color: %(color).2f
+                 """ % coh_dict)
+
+    print "Accuracy in calculation blocks:"
+    grouped = df.groupby(df.context.map({0: "motion", 1: "color"}))
+    print grouped.correct.mean()
 
 
 def practice(p, win, stims):
@@ -437,8 +655,8 @@ def subject_coherence(p, stims):
     with open(coh_file) as fid:
         coherences = json.load(fid)
     p.__dict__.update(coherences)
-    contexts = ["mot", "col"]
-    mot_coh, col_coh = [coherences["dot_%s_coh" % c] for c in contexts]
+    contexts = ["motion", "color"]
+    mot_coh, col_coh = [coherences[c] for c in contexts]
     stims["dots"].motion_coherence = mot_coh
     stims["dots"].color_coherence = col_coh
 
@@ -718,7 +936,7 @@ class Dots(object):
         self._dot_cycle = itertools.cycle(range(self.subframes))
 
     def new_array(self):
-
+        """Initialize a new set of evently-distributed dot positions."""
         half_field = self.field_size / 2
         locs = np.linspace(-half_field, half_field, 5)
         while True:

@@ -96,16 +96,17 @@ learn.update(dict(
 staircase = deepcopy(base)
 staircase.update(dict(
 
-    n_per_block=4,
+    n_per_block=6,
     n_blocks=20,
     log_base="data/%(subject)s_staircase",
     iti=(1.5, 3),
-    starting_coherence=.6,
+    starting_coherence=.4,
     burn_in_blocks=2,
     n_up=1,
     n_down=4,
     step=.05,
     blocks_bw_break=5,
+    n_calc_blocks=4,
 
     ))
 
