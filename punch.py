@@ -32,7 +32,6 @@ def main(arglist):
 
     # Open up the stimulus window
     win = cregg.launch_window(p)
-    win.refresh_rate = 60  # TODO FIX
 
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
@@ -159,7 +158,7 @@ def instruct(p, win, stims):
             if with_next_text:
                 next_text.draw()
             win.flip()
-            cregg.wait_and_listen("space", .5)
+            cregg.wait_and_listen("space", .25)
 
         slide("""
               Welcome to the experiment - thank you for participating!
@@ -305,7 +304,7 @@ def instruct(p, win, stims):
         win.flip()
         cregg.wait_check_quit(1)
 
-        fb_frames = int(p.fb_dur * win.refresh_rate) * 2
+        fb_frames = int(p.fb_dur * win.refresh_hz) * 2
         for i in xrange(fb_frames):
             if not i % p.fb_freq:
                 frame.flip_phase()
@@ -737,7 +736,7 @@ class EventEngine(object):
         if stim:
             dropped_before = self.win.nDroppedFrames
             event.clearEvents()
-            stim_frames = int(self.p.stim_dur * self.win.refresh_rate)
+            stim_frames = int(self.p.stim_dur * self.win.refresh_hz)
             for frame in xrange(stim_frames):
                 self.dots.draw()
                 self.frame.draw()
@@ -783,7 +782,7 @@ class EventEngine(object):
 
         # Feedback
         if self.feedback and not correct:
-            fb_frames = int(self.fb_dur * self.win.refresh_rate)
+            fb_frames = int(self.fb_dur * self.win.refresh_hz)
             for frame in xrange(fb_frames):
                 if not frame % self.fb_freq:
                     self.frame.flip_phase()
@@ -917,7 +916,7 @@ class Dots(object):
         # Move some info from params into self
         self.subframes = p.dot_subframes
         self.ndots = p.dot_count
-        self.speed = p.dot_speed / win.refresh_rate
+        self.speed = p.dot_speed / win.refresh_hz
         self.colors = np.array(p.dot_colors)
         self.field_size = p.field_size - p.frame_width
 
