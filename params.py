@@ -43,6 +43,8 @@ base = dict(
     quit_keys=["escape", "q"],
     resp_keys=["comma", "period"],
     wait_keys=["space"],
+    finish_keys=["return"],
+    trigger_keys=["5", "t"],
 
     # Where coherence info is saved after training
     coh_file_template="data/%s_coherence.json",
@@ -79,6 +81,11 @@ base = dict(
 )
 
 instruct = deepcopy(base)
+instruct.update(dict(
+
+    finish_text="Ready to start! Please tell the experimenter!",
+
+    ))
 
 learn = deepcopy(base)
 learn.update(dict(
@@ -127,6 +134,7 @@ scan.update(dict(
 
     # Timing
     tr=2.0,
+    equilibrium_trs=6,
 
     # Design
     n_runs=12,

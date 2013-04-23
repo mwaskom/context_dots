@@ -63,7 +63,7 @@ def main(arglist):
         finish_text = dedent(p.finish_text)
         finish_run = cregg.WaitText(win, finish_text,
                                     height=p.break_text_size,
-                                    advance_keys=p.wait_keys,
+                                    advance_keys=p.finish_keys,
                                     quit_keys=p.quit_keys)
         stims["finish"] = finish_run
 
@@ -101,7 +101,8 @@ def scan(p, win, stims):
     log = cregg.DataLog(p, log_cols)
 
     # Execute the experiment
-    with cregg.PresentationLoop(win, log, scan_exit):
+    with cregg.PresentationLoop(win, p, log=log,
+                                fix=stims["fix"], exit_func=scan_exit):
         stim_event.clock.reset()
         for t, t_info in design.iterrows():
 
@@ -140,7 +141,7 @@ def scan_exit(log):
 def instruct(p, win, stims):
     """Participant-paced instructions with live demos of stimuli."""
 
-    with cregg.PresentationLoop(win):
+    with cregg.PresentationLoop(win, p):
 
         stim_event = EventEngine(win, stims, p)
         dots = stims["dots"]
@@ -158,7 +159,7 @@ def instruct(p, win, stims):
             if with_next_text:
                 next_text.draw()
             win.flip()
-            cregg.wait_and_listen("space")
+            cregg.wait_and_listen("space", .5)
 
         slide("""
               Welcome to the experiment - thank you for participating!
@@ -355,7 +356,7 @@ def instruct(p, win, stims):
               any of the other instructions. Good luck!
               """)
 
-        slide("Ready to start! Please tell the experimenter!", False)
+        stims["finish"].draw()
 
 
 def learn(p, win, stims):
@@ -384,7 +385,7 @@ def learn(p, win, stims):
     learned = False
     block = 0
     cue = 0
-    with cregg.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, p, log=log):
         stim_event.clock.reset()
         while not learned:
 
@@ -474,9 +475,9 @@ def staircase(p, win, stims):
     # The convention is that wrong answers are positive (up)
     # while correct answers are negative (down)
     resp_accs = [0, 0]
+    cue = 0
 
-    with cregg.PresentationLoop(win, log, staircase_exit):
-        cue = 0
+    with cregg.PresentationLoop(win, p, log=log, exit_func=staircase_exit):
         stim_event.clock.reset()
         for block in xrange(p.n_blocks):
 
@@ -601,7 +602,7 @@ def practice(p, win, stims):
     stim_event = EventEngine(win, stims, p)
 
     # Execute the experimental loop
-    with cregg.PresentationLoop(win, log, scan_exit):
+    with cregg.PresentationLoop(win, p, log=log, exit_func=scan_exit):
         stim_event.clock.reset()
         for trial in xrange(p.n_trials):
 

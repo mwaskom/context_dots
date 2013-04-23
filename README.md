@@ -64,8 +64,8 @@ File with dictionaries containing experimental parameters.
 ### generate_designs.py
 
 Module for creating static schedules for the different modes of the experiment.
-At the moment it is only response for the `scan` mode; everything else is
-generated at runtime.
+At the moment it is only used for the `scan` mode; everything else is generated
+at runtime.
 
 ### **monitors.py**
 
