@@ -4,12 +4,17 @@
 
 The PUnCH (or Parametric Uncertainty in the Control Hierarchy) experiment investigates the behavioral and neural effects of parametrically manipulating uncertainty at multiple levels of task structure. 
 
+The basic task used here is a context-dependent random dot motion perceptual
+decision-making task.
+
 ## Code Structure
 
-The code below uses PsychoPy for the presentation of experimental stimuli.
-It also makes heavy use of the cregg package for experimental utilities.
-Design generation uses the moss package. Otherwise the standard SciPy stack
-should be sufficient to control the experiment.
+The code below uses [PsychoPy](http://www.psychopy.org/) for the presentation
+of experimental stimuli. It also makes heavy use of the
+[cregg](https://github.com/mwaskom/cregg) package for experimental utilities.
+Design generation uses the [moss](https://github.com/mwaskom/moss) package.
+Otherwise the standard SciPy stack should be sufficient to control the
+experiment.
 
 
 ### punch.py
