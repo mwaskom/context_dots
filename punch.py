@@ -20,7 +20,7 @@ import cregg
 
 def main(arglist):
 
-    # Get the experiment paramters
+    # Get the experiment parameters
     mode = arglist.pop(0)
     p = cregg.Params(mode)
     p.set_by_cmdline(arglist)
@@ -67,7 +67,7 @@ def main(arglist):
                                     quit_keys=p.quit_keys)
         stims["finish"] = finish_run
 
-    # Excecute the experiment function
+    # Execute the experiment function
     globals()[mode](p, win, stims)
 
 
@@ -181,8 +181,8 @@ def instruct(p, win, stims):
               Press space to see an example stimulus.
               """, False)
 
-        dots.motion_coherence = .5
-        dots.color_coherence = .5
+        dots.motion_coherence = .35
+        dots.color_coherence = .35
         at_time = stim_event.clock.getTime() + 1
         stim_event(at_time, 0, 0, 0, 0, 0)
 
@@ -224,7 +224,7 @@ def instruct(p, win, stims):
               For all parts of the experiment, use the index and middle
               fingers on your right hand to make your responses.
 
-              Inside the scanner you'll be using a button box with just
+              Inside the scanner, you'll be using a button box with just
               a few buttons. For the parts that take place on a computer,
               you should make your responses using the %s and %s buttons.
               """ % tuple(p.resp_keys))
@@ -279,7 +279,7 @@ def instruct(p, win, stims):
               The basic structure of the experiment is as follows.
 
               The first session (today) is focused on helping you learn
-              the task and callibrating the difficulty to your performance.
+              the task and calibrating the difficulty to your performance.
               """)
 
         slide("""
@@ -320,7 +320,7 @@ def instruct(p, win, stims):
               You'll see the level of noise changing over the course of this
               part as we try to dial in the parameters for you.
 
-              To help us callibrate the difficulty, it's important that you
+              To help us calibrate the difficulty, it's important that you
               answer quickly and accurately, just as you will during the
               main experiment.
 
@@ -355,7 +355,7 @@ def instruct(p, win, stims):
               any of the other instructions. Good luck!
               """)
 
-        slide("Ready to start! Please tell the exerimenter!", False)
+        slide("Ready to start! Please tell the experimenter!", False)
 
 
 def learn(p, win, stims):
@@ -601,7 +601,7 @@ def practice(p, win, stims):
     stim_event = EventEngine(win, stims, p)
 
     # Execute the experimental loop
-    with cregg.PresentationLoop(win, log):
+    with cregg.PresentationLoop(win, log, scan_exit):
         stim_event.clock.reset()
         for trial in xrange(p.n_trials):
 
