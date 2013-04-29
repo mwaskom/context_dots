@@ -90,12 +90,12 @@ instruct.update(dict(
 learn = deepcopy(base)
 learn.update(dict(
 
-    n_per_block=2,
+    n_per_block=8,
     log_base="data/%(subject)s_learn",
     coherence=1,
     iti=(1.5, 3),
-    perf_thresh=1,
-    blocks_at_thresh=1,
+    perf_thresh=1,  # mean correct over a block
+    blocks_at_thresh=2,  # for each frame
     blocks_bw_break=5,
 
     ))
@@ -104,7 +104,7 @@ staircase = deepcopy(base)
 staircase.update(dict(
 
     n_per_block=6,
-    n_blocks=20,
+    n_blocks=80,
     log_base="data/%(subject)s_staircase",
     iti=(1.5, 3),
     starting_coherence=.4,
@@ -113,7 +113,7 @@ staircase.update(dict(
     n_down=4,
     step=.05,
     blocks_bw_break=5,
-    n_calc_blocks=4,
+    n_calc_blocks=10,
 
     ))
 
