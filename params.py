@@ -10,6 +10,7 @@ base = dict(
     full_screen=True,
     screen_number=1,
     window_color=-.333,
+    fmri_monitor="cni_lcd2",
 
     # Fixation
     fix_size=.2,
@@ -122,10 +123,11 @@ practice.update(dict(
 
     log_base="data/%(subject)s_practice_run%(run)d",
     iti=(1.5, 3),
-    n_trials=10,
     trials_bw_break=5,
 
     ))
+def practice_cmdline(parser):
+    parser.add_argument("-trials", type=int, default=200)
 
 scan = deepcopy(base)
 scan.update(dict(

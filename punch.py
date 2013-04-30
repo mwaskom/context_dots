@@ -603,7 +603,7 @@ def practice(p, win, stims):
     # Execute the experimental loop
     with cregg.PresentationLoop(win, p, log=log, exit_func=scan_exit):
         stim_event.clock.reset()
-        for trial in xrange(p.n_trials):
+        for trial in xrange(p.trials):
 
             t_info = dict(trial=trial)
 
