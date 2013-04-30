@@ -592,7 +592,7 @@ def practice(p, win, stims):
 
     # Set up the log object
     log_cols = ["trial", "context", "cue", "frame_id",
-                "motion", "color",
+                "motion", "color", "cue_time", "cue_onset",
                 "correct", "rt", "response",
                 "stim_onset", "dropped_frames"]
     log = cregg.DataLog(p, log_cols)
