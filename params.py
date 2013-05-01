@@ -8,9 +8,9 @@ base = dict(
     monitor_name="mlw-mbair",
     monitor_units="deg",
     full_screen=True,
-    screen_number=1,
+    screen_number=0,
     window_color=-.333,
-    fmri_monitor="cni_lcd2",
+    fmri_monitor_name="cni_lcd2",
 
     # Fixation
     fix_size=.2,
@@ -43,6 +43,7 @@ base = dict(
     # Response settings
     quit_keys=["escape", "q"],
     resp_keys=["comma", "period"],
+    fmri_resp_keys=["2", "3"],
     wait_keys=["space"],
     finish_keys=["return"],
     trigger_keys=["5", "t"],
