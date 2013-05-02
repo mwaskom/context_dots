@@ -127,11 +127,11 @@ def scan_exit(log):
     df = pd.read_csv(log.fname)
     if not len(df):
         return
-    print "Overall Accuracy: %.2f" % df.correct.dropna().mean()
-    print df.groupby("context").correct.dropna().mean()
+    print "Overall Accuracy: %.2f" % df.correct.mean()
+    print df.groupby("context").correct.mean().astype(float)
     if df.rt.notnull().any():
-        print "Average RT: %.2f" % df.rt.dropna().mean()
-        print df.groupby("context").rt.dropna().mean()
+        print "Average RT: %.2f" % df.rt.mean()
+        print df.groupby("context").rt.mean()
     diff = (df.cue_time - df.cue_onset).abs().mean()
     if  diff > .025:
         print "Detected issues with cue timing (diff = %.3f)" % diff
@@ -169,7 +169,7 @@ def instruct(p, win, stims):
 
         slide("""
               In this experiment, you'll be making decisions about
-              the information you see in simple, noisy stimuli.
+              the information you see in simple stimuli.
 
               Each stimulus will consist of a field of dots.
 
@@ -247,14 +247,12 @@ def instruct(p, win, stims):
 
         slide("""
               Our aim is to get a precise measurement of how long it takes
-              you to make these decisions. Although it is important that you
-              answer accurately, we ask that you start making the decision
-              as soon as the dots appear and respond right when you have
-              made the decision.
+              you to make these decisions. It is important that you answer
+              as quickly as possible while still making correct responses.
 
               Your response will be accepted as long as the dots are still
-              on the screen for that trial, but again, press the correct
-              button as soon as you have an answer.
+              on the screen for that trial, but press the correct button
+              as soon as you have an answer.
               """)
 
         slide("""
@@ -591,7 +589,7 @@ def practice(p, win, stims):
     subject_coherence(p, stims)
 
     # Set up the log object
-    log_cols = ["trial", "context", "cue", "frame_id",
+    log_cols = ["trial", "context", "cue", "frame_id", "early",
                 "motion", "color", "cue_time", "cue_onset",
                 "correct", "rt", "response",
                 "stim_onset", "dropped_frames"]
@@ -622,6 +620,8 @@ def practice(p, win, stims):
                 cue=cregg.flip(),
                 motion=cregg.flip(),
                 color=cregg.flip(),
+                early=bool(cregg.flip()),
+                cue_dur=p.cue_dur,
             )
             target = [s_info["motion"], s_info["color"]][s_info["context"]]
             s_info["target"] = target

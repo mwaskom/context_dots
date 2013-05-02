@@ -124,7 +124,7 @@ practice.update(dict(
 
     log_base="data/%(subject)s_practice_run%(run)d",
     iti=(1.5, 3),
-    trials_bw_break=5,
+    trials_bw_break=25,
 
     ))
 def practice_cmdline(parser):
