@@ -107,7 +107,7 @@ staircase = deepcopy(base)
 staircase.update(dict(
 
     n_per_block=6,
-    n_blocks=80,
+    n_blocks=60,
     log_base="data/%(subject)s_staircase",
     iti=(1.5, 3),
     starting_coherence=.4,
@@ -129,7 +129,7 @@ practice.update(dict(
 
     ))
 def practice_cmdline(parser):
-    parser.add_argument("-trials", type=int, default=250)
+    parser.add_argument("-trials", type=int, default=200)
 
 scan = deepcopy(base)
 scan.update(dict(
