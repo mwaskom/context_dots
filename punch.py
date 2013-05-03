@@ -101,7 +101,8 @@ def scan(p, win, stims):
 
     # Execute the experiment
     with cregg.PresentationLoop(win, p, log=log,
-                                fix=stims["fix"], exit_func=scan_exit):
+                                fix=stims["fix"],
+                                exit_func=scan_exit):
         stim_event.clock.reset()
         for t, t_info in design.iterrows():
 
@@ -119,6 +120,10 @@ def scan(p, win, stims):
             t_info = t_info.append(pd.Series(res))
             log.add_data(t_info)
 
+        stims["fix"].draw()
+        win.flip()
+        cregg.wait_check_quit(p.leadout_secs)
+
         stims["finish"].draw()
 
 
@@ -127,14 +132,16 @@ def scan_exit(log):
     df = pd.read_csv(log.fname)
     if not len(df):
         return
-    print "Overall Accuracy: %.2f" % df.correct.mean()
-    print df.groupby("context").correct.mean().astype(float)
-    if df.rt.notnull().any():
-        print "Average RT: %.2f" % df.rt.mean()
-        print df.groupby("context").rt.mean()
+
     diff = (df.cue_time - df.cue_onset).abs().mean()
     if  diff > .025:
         print "Detected issues with cue timing (diff = %.3f)" % diff
+
+    print "Overall Accuracy: %.2f" % df.correct.mean()
+    print df.correct.astype(float).groupby(df.context).mean()
+    if df.rt.notnull().any():
+        print "Average RT: %.2f" % df.rt.mean()
+        print df.groupby("context").rt.mean()
 
 
 def instruct(p, win, stims):
@@ -206,7 +213,6 @@ def instruct(p, win, stims):
 
               Don't worry too much about memorizing the frames now; you'll
               receive extensive practice before the main experiment begins.
-
               """)
 
         for i, context in enumerate(["motion", "color"]):
@@ -248,7 +254,7 @@ def instruct(p, win, stims):
         slide("""
               Our aim is to get a precise measurement of how long it takes
               you to make these decisions. It is important that you answer
-              as quickly as possible while still making correct responses.
+              as quickly as possible, while making correct responses.
 
               Your response will be accepted as long as the dots are still
               on the screen for that trial, but press the correct button
@@ -256,9 +262,9 @@ def instruct(p, win, stims):
               """)
 
         slide("""
-              Because we are trying to get precise measurements, it's
-              important that you pay as close attention as possible during
-              the experiment, so you can respond quickly and accurately.
+              Because we are trying to get precise measurements, it is
+              important that you pay attention as carefully as possible
+              so that you can respond quickly and accurately.
 
               For the parts that take place outside the scanner, there will
               be frequent breaks to allow you to rest.
@@ -267,7 +273,7 @@ def instruct(p, win, stims):
         slide("""
               It's also important that, to minimize eye movements, you keep
               your eyes fixated on the spot in the center of the screen
-              throughout  the experiment whenever it is present.
+              throughout the experiment whenever this spot is present.
 
               The fixation spot will turn from black to white very shortly
               before each trial begins to signal that you should get ready.
@@ -329,8 +335,7 @@ def instruct(p, win, stims):
               The third and final part you'll perform today will be a practice
               session that is very similar to what you'll be doing inside the
               scanner. You'll no longer be receiving feedback for this part,
-              and it's important that you try your best to meet the performance
-              criterion to proceed to the scanning session.
+              and it's important that you try your best.
 
               Because scanner time is quite valuable, we can only scan
               participants who are able to perform at a high level of
@@ -466,7 +471,7 @@ def staircase(p, win, stims):
     dots.motion_coherence = p.starting_coherence
     dots.color_coherence = p.starting_coherence
 
-    log.coherences = [p.starting_coherence] * 2
+    coherences = [p.starting_coherence] * 2
 
     # Set up the accuracy trackers
     # The convention is that wrong answers are positive (up)
@@ -496,8 +501,8 @@ def staircase(p, win, stims):
                 # Get the feature values for this trial
                 motion, color, target = trial_values(p, context)
 
-                dots.motion_coherence = log.coherences[0]
-                dots.color_coherence = log.coherences[1]
+                dots.motion_coherence = coherences[0]
+                dots.color_coherence = coherences[1]
 
                 # Set up the trial info dict
                 t_info = dict(block_trial=block_trial,
@@ -505,7 +510,7 @@ def staircase(p, win, stims):
                               color=color)
                 t_info.update(dict(zip(["motion_coherence",
                                         "color_coherence"],
-                                       log.coherences)))
+                                       coherences)))
                 t_info.update(block_info)
 
                 # Intra-trial interval
@@ -541,7 +546,10 @@ def staircase(p, win, stims):
                     resp_accs[context] = 0
                 else:
                     step_sign = 0
-                log.coherences[context] += step_sign * p.step
+                coherences[context] += step_sign * p.step
+
+                # Make sure we didn't reach 0
+                coherences[context] = max(0 + p.step, coherences[context])
 
             if block and not block % p.blocks_bw_break:
                 stims["break"].draw()

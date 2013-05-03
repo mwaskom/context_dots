@@ -9,6 +9,7 @@ base = dict(
     monitor_units="deg",
     full_screen=True,
     screen_number=0,
+    fmri_screen_number=1,
     window_color=-.333,
     fmri_monitor_name="cni_lcd2",
 
@@ -63,11 +64,11 @@ base = dict(
     # Communication
     instruct_size=0.5,
     instruct_text="""
-     Use the < and > keys to respond
-    as soon as you make your decision
+    Use the comma and period keys to respond
+            as soon as you make your decision
 
-               Press space to begin
-          """,
+             Press space to begin
+    """,
 
     break_text_size=0.5,
     break_text="""
@@ -77,8 +78,8 @@ base = dict(
     finish_text="""
                 Run Finished!
 
-        Please tell the experimenter!
-        """,
+      Please tell the experimenter!
+      """,
 
 )
 
@@ -97,7 +98,7 @@ learn.update(dict(
     coherence=1,
     iti=(1.5, 3),
     perf_thresh=1,  # mean correct over a block
-    blocks_at_thresh=2,  # for each frame
+    blocks_at_thresh=1,  # for each frame
     blocks_bw_break=5,
 
     ))
@@ -128,7 +129,7 @@ practice.update(dict(
 
     ))
 def practice_cmdline(parser):
-    parser.add_argument("-trials", type=int, default=200)
+    parser.add_argument("-trials", type=int, default=250)
 
 scan = deepcopy(base)
 scan.update(dict(
@@ -138,6 +139,7 @@ scan.update(dict(
     # Timing
     tr=2.0,
     equilibrium_trs=6,
+    leadout_secs=10,
 
     # Design
     n_runs=12,
@@ -156,5 +158,9 @@ scan.update(dict(
     switch_tol=0.01,
     trial_trans_tol=0.1,
     design_file="design/scan_design.csv",
-
+    finish_text="Run completed!",
+    instruct_text="""
+    Use your index and ring finger to respond
+    as soon as you have made each decision!
+    """
     ))
