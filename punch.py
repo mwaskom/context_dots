@@ -582,9 +582,13 @@ def staircase_exit(log):
                    color: %(color).2f
                  """ % coh_dict)
 
-    print "Accuracy in calculation blocks:"
     grouped = df.groupby(df.context.map({0: "motion", 1: "color"}))
+
+    print "Accuracy in calculation blocks:"
     print grouped.correct.mean()
+
+    print "Speed in calculation blocks:"
+    print grouped.rt.mean()
 
 
 def practice(p, win, stims):
