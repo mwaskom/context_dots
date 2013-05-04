@@ -32,6 +32,7 @@ def main(arglist):
 
     # Open up the stimulus window
     win = cregg.launch_window(p)
+    p.win_refresh_hz = win.refresh_hz
 
     # Set up the stimulus objects
     fix = visual.GratingStim(win, tex=None,
@@ -122,7 +123,7 @@ def scan(p, win, stims):
 
         stims["fix"].draw()
         win.flip()
-        cregg.wait_check_quit(p.leadout_secs)
+        cregg.wait_check_quit(p.leadout_trs * p.tr)
 
         stims["finish"].draw()
 
@@ -611,7 +612,8 @@ def practice(p, win, stims):
     stim_event = EventEngine(win, stims, p)
 
     # Execute the experimental loop
-    with cregg.PresentationLoop(win, p, log=log, exit_func=scan_exit):
+    with cregg.PresentationLoop(win, p, log=log, fix=stims["fix"],
+                                exit_func=scan_exit):
         stim_event.clock.reset()
         for trial in xrange(p.trials):
 

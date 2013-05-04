@@ -6,12 +6,12 @@ base = dict(
 
     # Display setup
     monitor_name="mlw-mbair",
-    monitor_units="deg",
-    full_screen=True,
+    fmri_monitor_name="cni_47",
     screen_number=0,
     fmri_screen_number=1,
+    monitor_units="deg",
+    full_screen=True,
     window_color=-.333,
-    fmri_monitor_name="cni_47",
 
     # Fixation
     fix_size=.2,
@@ -53,6 +53,7 @@ base = dict(
     coh_file_template="data/%s_coherence.json",
 
     # General timing (all in seconds)
+    tr=2.0,
     orient_dur=.5,
     cue_dur=1.0,
     stim_dur=2.0,
@@ -125,11 +126,12 @@ practice.update(dict(
 
     log_base="data/%(subject)s_practice_run%(run)d",
     iti=(1.5, 3),
-    trials_bw_break=25,
+    equilibrium_trs=2,
 
     ))
 def practice_cmdline(parser):
     parser.add_argument("-trials", type=int, default=200)
+    parser.add_argument("-trials_bw_break", type=int, default=30)
 
 scan = deepcopy(base)
 scan.update(dict(
@@ -137,9 +139,8 @@ scan.update(dict(
     log_base="data/%(subject)s_scan_run%(run)d",
 
     # Timing
-    tr=2.0,
     equilibrium_trs=6,
-    leadout_secs=10,
+    leadout_trs=5,
 
     # Design
     n_runs=12,
