@@ -11,7 +11,7 @@ base = dict(
     screen_number=0,
     fmri_screen_number=1,
     window_color=-.333,
-    fmri_monitor_name="cni_lcd2",
+    fmri_monitor_name="cni_47",
 
     # Fixation
     fix_size=.2,
