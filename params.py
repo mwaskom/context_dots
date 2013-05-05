@@ -136,7 +136,7 @@ def practice_cmdline(parser):
 scan = deepcopy(base)
 scan.update(dict(
 
-    log_base="data/%(subject)s_scan_run%(run)d",
+    log_base="data/%(subject)s_scan_run%(run)02d",
 
     # Timing
     equilibrium_trs=6,
