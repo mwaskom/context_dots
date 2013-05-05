@@ -43,7 +43,7 @@ reaches a set criterion of performance (in terms of accuracy).
 
 Blocked trials that staircase the coherence values (independently for each
 dimension) based on response accuracy. Generates a json file in the data
-directory to be used for subsequent sessions.
+directory to be used for subsequent sessions. Presents response feedback.
 
 #### practice
 
@@ -51,11 +51,15 @@ Balanced, interleaved context-switching version of the experiment. The stimulus
 values and context choices are generated at runtime, so this might not be
 perfectly balanced for short runs.
 
+Feedback can be turned on (it is off by default) with the `-feedback` command 
+line switch. The number of trials in the run and the number of trials in between
+breaks can also be set on the command line. Can also run in scanner mode.
+
 #### scan
 
 The main experiment. Reads trial schedule information produced by
 `generate_designs.py`. Can be collected in scanner mode or computer mode,
-depending on presence of `-fmri` switch.
+depending on usage of the `-fmri` switch.
 
 ### params.py
 
