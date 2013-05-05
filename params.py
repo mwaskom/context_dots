@@ -132,6 +132,7 @@ practice.update(dict(
 def practice_cmdline(parser):
     parser.add_argument("-trials", type=int, default=200)
     parser.add_argument("-trials_bw_break", type=int, default=30)
+    parser.add_argument("-feedback", action="store_true")
 
 scan = deepcopy(base)
 scan.update(dict(

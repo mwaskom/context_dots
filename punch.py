@@ -609,7 +609,7 @@ def practice(p, win, stims):
     log = cregg.DataLog(p, log_cols)
 
     # Set up the object to control stimulus presentation
-    stim_event = EventEngine(win, stims, p)
+    stim_event = EventEngine(win, stims, p, feedback=p.feedback)
 
     # Execute the experimental loop
     with cregg.PresentationLoop(win, p, log=log, fix=stims["fix"],
