@@ -32,6 +32,12 @@ mlw_mbair = dict(monitor_name='mlw-mbair',
                  distance=63,
                  notes="")
 
+waglab_mbpro = dict(monitor_name='waglab-mbpro',
+                    width=33,
+                    size=[1440, 900],
+                    distance=63,
+                    notes="")
+
 ben_octocore = dict(monitor_name='ben-octocore',
                     width=43.5,
                     size=[1680, 1050],
