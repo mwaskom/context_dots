@@ -26,7 +26,8 @@ def main(arglist):
     p.set_by_cmdline(arglist)
 
     # Assign the frame identities randomly over subjects
-    state = cregg.subject_specific_state(p.subject)
+    id = p.subject if p.cbid is None else p.cbid
+    state = cregg.subject_specific_state(id)
     frame_ids = state.permutation(list(letters[:2 * p.frame_per_context]))
     p.frame_ids = frame_ids.reshape(2, -1).tolist()
 
