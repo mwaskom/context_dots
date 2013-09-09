@@ -25,10 +25,14 @@ sub-modes of this script for presenting different stages of the experiment
 
 All modes take a `-subject` (can be shortened to `-s`) argument. Several
 aspects are randomized across subjects based on the subject ID, so any
-interaction with a subject should use this flag.
+interaction with a subject should use this flag. The `-cbid` option can be
+used to seed the counterbalance with a different ID than will be associated
+with the data.
 
 Run with the `-debug` flag to present in a separate GUI window. Debug mode
 also adds textual information about the stimulus parameters on the screen.
+
+The `punch.py` interface has the following modes (usage is `python punch.py <mode>`):
 
 #### instruct
 
