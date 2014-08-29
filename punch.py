@@ -682,7 +682,7 @@ def subject_coherence(p, stims):
 
 class EventEngine(object):
     """Controls execution of a random dot decision trial."""
-    def __init__(self, win, stims, p, feedback=False):
+    def __init__(self, win, stims, p, feedback=False, capture_frames=False):
 
         self.win = win
         self.stims = stims
@@ -697,6 +697,7 @@ class EventEngine(object):
         self.fix_stim_color = p.fix_stim_color
         self.frame_ids = p.frame_ids
         self.clock = core.Clock()
+        self.capture_frames = capture_frames
         self.debug = p.debug
         if feedback:
             self.fb_dur = p.fb_dur
@@ -759,6 +760,8 @@ class EventEngine(object):
                     for text in self.debug_text:
                         text.draw()
                 self.win.flip()
+                if self.capture_frames:
+                    self.win.getMovieFrame()
                 if not frame:
                     resp_clock = core.Clock()
                     stim_onset_time = self.clock.getTime()
