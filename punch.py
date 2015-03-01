@@ -14,6 +14,8 @@ import pandas as pd
 import numpy as np
 from numpy.random import randint, uniform
 from scipy import stats
+from colormath.color_objects import LabColor, sRGBColor
+from colormath.color_conversions import convert_color
 from psychopy import visual, core, event
 import cregg
 
@@ -659,7 +661,7 @@ def practice(p, win, stims):
 def trial_values(p, context):
     """Get motion, color, and target value for training."""
     motion = randint(len(p.dot_dirs))
-    color = randint(len(p.dot_colors))
+    color = randint(len(p.dot_color_idxs))
     target = [motion, color][context]
     return motion, color, target
 
@@ -730,7 +732,7 @@ class EventEngine(object):
 
         if stim:
             self.dots.direction = self.p.dot_dirs[int(motion)]
-            self.dots.color = self.p.dot_colors[int(color)]
+            self.dots.color = self.p.dot_color_idxs[int(color)]
             self.dots.new_array()
 
         # Orient cue
@@ -935,7 +937,11 @@ class Dots(object):
         self.subframes = p.dot_subframes
         self.ndots = p.dot_count
         self.speed = p.dot_speed / win.refresh_hz
-        self.colors = np.array(p.dot_colors)
+        self.colors = self._setup_color_array(p.dot_color_center,
+                                              p.dot_color_n,
+                                              p.dot_color_L,
+                                              p.dot_color_r)
+        self.color_idxs = p.dot_color_idxs
         self.field_size = p.field_size - p.frame_width
 
         # Initialize the Psychopy object
@@ -953,6 +959,22 @@ class Dots(object):
         # Use a cycle to control which set of dots is getting drawn
         self._dot_cycle = itertools.cycle(range(self.subframes))
 
+    def _setup_color_array(self, center, n, L, r):
+
+        a, b = center
+        thetas = np.linspace(0, 2 * np.pi, n + 1)[:-1]
+
+        colors = []
+        for theta in thetas:
+            lab = LabColor(L, a + r * np.cos(theta), b + r * np.sin(theta))
+            rgb = convert_color(lab, sRGBColor)
+            colors.append(rgb.get_value_tuple())
+
+        colors = np.array(colors)
+        assert (colors > 0).all()
+        assert (colors < 1).all()
+        return colors
+
     def new_array(self):
         """Initialize a new set of evently-distributed dot positions."""
         half_field = self.field_size / 2
@@ -967,7 +989,7 @@ class Dots(object):
                     continue
                 _, p, _, _ = stats.chi2_contingency(table)
                 ps[i] = p
-            if (ps > 0.1).all():
+            if (ps > 0.3).all():
                 break
 
         self._xys = xys.transpose(2, 1, 0)
@@ -1003,12 +1025,14 @@ class Dots(object):
         """Set dot colors using the stored coherence value."""
         signal = np.random.uniform(size=self.ndots) < self.color_coherence
         self.color_signals.append(signal.mean())
+
         rgb = np.zeros((self.ndots, 3))
-        rgb[signal] = self.color
+        rgb[signal] = self.colors[self.color]
 
         noise = ~signal
-        noise_colors = (np.random.uniform(size=noise.sum()) < 0.5).astype(int)
-        rgb[noise] = self.colors[noise_colors]
+        noise_colors = self.colors[np.random.randint(len(self.colors),
+                                                     size=noise.sum())]
+        rgb[noise] = noise_colors
         rgb = rgb * 2 - 1
         self.dots.setColors(rgb)
 

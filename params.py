@@ -11,7 +11,7 @@ base = dict(
     fmri_screen_number=1,
     monitor_units="deg",
     full_screen=True,
-    window_color=-.333,
+    window_color=-.4,
 
     # Fixation
     fix_size=.2,
@@ -34,12 +34,15 @@ base = dict(
     dot_shape="square",
     dot_subframes=3,
     dot_speed=5,  # in degrees/sec
-    dot_size=.07,  # in degrees
+    dot_size=.1,  # in degrees
     dot_dirs=[90, 270],
     dot_dir_names=["up", "down"],
-    dot_colors=[(0.93226, 0.53991, 0.26735),
-                (0., 0.74055, 0.22775)],
-    dot_color_names=["red", "green"],
+    dot_color_center=(0, 0),
+    dot_color_n=30,
+    dot_color_L=70,
+    dot_color_r=41,
+    dot_color_idxs=[0, 15],
+    dot_color_names=["red", "blue"],
 
     # Response settings
     quit_keys=["escape", "q"],
